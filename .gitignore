@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.log
+*.tmp
+test-login.json
+appsettings.Development.json
+*.db
+*.bak
+*.bacpac
+
