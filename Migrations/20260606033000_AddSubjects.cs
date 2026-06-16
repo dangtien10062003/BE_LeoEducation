@@ -35,6 +35,20 @@ namespace LeoEducation.Api.Migrations
                     (N'Sinh học', N'Các khóa học sinh học', 1, GETDATE(), GETDATE());
                 END
 
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Courses')
+                BEGIN
+                    CREATE TABLE [Courses] (
+                        [courseId] int NOT NULL IDENTITY,
+                        [courseName] nvarchar(255) NOT NULL,
+                        [description] nvarchar(max) NULL,
+                        [instructorId] int NULL,
+                        [price] decimal(18,2) NULL,
+                        [createdAt] datetime2 NOT NULL DEFAULT (GETDATE()),
+                        [updatedAt] datetime2 NOT NULL DEFAULT (GETDATE()),
+                        CONSTRAINT [PK_Courses] PRIMARY KEY ([courseId])
+                    );
+                END
+
                 IF NOT EXISTS (
                     SELECT * FROM INFORMATION_SCHEMA.COLUMNS
                     WHERE TABLE_NAME = 'Courses' AND COLUMN_NAME = 'subjectId'
@@ -58,6 +72,54 @@ namespace LeoEducation.Api.Migrations
                 BEGIN
                     ALTER TABLE [Courses] WITH CHECK ADD CONSTRAINT [FK_Courses_Subjects_subjectId]
                     FOREIGN KEY([subjectId]) REFERENCES [Subjects] ([subjectId]) ON DELETE SET NULL;
+                END
+
+                IF NOT EXISTS (
+                    SELECT * FROM sys.indexes
+                    WHERE name = 'IX_Courses_instructorId' AND object_id = OBJECT_ID('[Courses]')
+                )
+                BEGIN
+                    CREATE INDEX [IX_Courses_instructorId] ON [Courses] ([instructorId]);
+                END
+
+                IF NOT EXISTS (
+                    SELECT * FROM sys.foreign_keys
+                    WHERE name = 'FK_Courses_Instructors_instructorId'
+                )
+                BEGIN
+                    ALTER TABLE [Courses] WITH CHECK ADD CONSTRAINT [FK_Courses_Instructors_instructorId]
+                    FOREIGN KEY([instructorId]) REFERENCES [Instructors] ([Id]) ON DELETE SET NULL;
+                END
+
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CourseRegistrations')
+                BEGIN
+                    CREATE TABLE [CourseRegistrations] (
+                        [registrationId] int NOT NULL IDENTITY,
+                        [fullName] nvarchar(255) NOT NULL,
+                        [email] nvarchar(255) NULL,
+                        [phone] nvarchar(20) NOT NULL,
+                        [courseId] int NOT NULL,
+                        [status] nvarchar(50) NOT NULL DEFAULT N'Má»›i',
+                        [createdAt] datetime2 NOT NULL DEFAULT (GETDATE()),
+                        CONSTRAINT [PK_CourseRegistrations] PRIMARY KEY ([registrationId])
+                    );
+                END
+
+                IF NOT EXISTS (
+                    SELECT * FROM sys.indexes
+                    WHERE name = 'IX_CourseRegistrations_courseId' AND object_id = OBJECT_ID('[CourseRegistrations]')
+                )
+                BEGIN
+                    CREATE INDEX [IX_CourseRegistrations_courseId] ON [CourseRegistrations] ([courseId]);
+                END
+
+                IF NOT EXISTS (
+                    SELECT * FROM sys.foreign_keys
+                    WHERE name = 'FK_Registration_Course'
+                )
+                BEGIN
+                    ALTER TABLE [CourseRegistrations] WITH CHECK ADD CONSTRAINT [FK_Registration_Course]
+                    FOREIGN KEY([courseId]) REFERENCES [Courses] ([courseId]) ON DELETE CASCADE;
                 END
             ");
         }

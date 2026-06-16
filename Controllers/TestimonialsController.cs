@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -17,23 +18,33 @@ public class TestimonialsController : ControllerBase
         _db = db;
     }
 
-    /// <summary>
-    /// GET /api/testimonials — Lấy danh sách đánh giá
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] ActiveFilterQuery request)
     {
-        var items = await _db.Testimonials
-            .Where(t => t.IsActive)
+        var query = _db.Testimonials.AsQueryable();
+
+        if (!request.IncludeInactive)
+            query = query.Where(t => t.IsActive);
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var keyword = request.Search.Trim().ToLower();
+            query = query.Where(t => t.StudentName.ToLower().Contains(keyword)
+                                  || (t.JobTitle != null && t.JobTitle.ToLower().Contains(keyword))
+                                  || t.Content.ToLower().Contains(keyword));
+        }
+
+        var total = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(t => t.CreatedAt)
+            .Skip(request.Offset)
+            .Take(request.PageSize)
             .ToListAsync();
 
-        return Ok(ApiResponse<object>.Ok(items));
+        return Ok(PagedResponse<object>.Ok(items.Cast<object>().ToList(), request.PageIndex, request.PageSize, total));
     }
 
-    /// <summary>
-    /// GET /api/testimonials/{id} — Chi tiết đánh giá
-    /// </summary>
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -44,9 +55,6 @@ public class TestimonialsController : ControllerBase
         return Ok(ApiResponse<Testimonial>.Ok(testimonial));
     }
 
-    /// <summary>
-    /// POST /api/testimonials — Thêm đánh giá mới
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTestimonialRequest request)
     {
@@ -63,19 +71,19 @@ public class TestimonialsController : ControllerBase
             Content = request.Content,
             Rating = request.Rating,
             AvatarURL = request.AvatarURL,
-            IsActive = true,
+            IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow
         };
 
         _db.Testimonials.Add(testimonial);
         await _db.SaveChangesAsync();
 
+        testimonial.HashCode = HashCodeGenerator.Generate(nameof(Testimonial), testimonial.TestimonialId);
+        await _db.SaveChangesAsync();
+
         return Ok(ApiResponse<Testimonial>.Ok(testimonial, "Thêm đánh giá thành công"));
     }
 
-    /// <summary>
-    /// PUT /api/testimonials/{id} � C?p nh?t d�nh gi�
-    /// </summary>
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateTestimonialRequest request)
     {
@@ -87,32 +95,29 @@ public class TestimonialsController : ControllerBase
 
         var testimonial = await _db.Testimonials.FindAsync(id);
         if (testimonial == null)
-            return NotFound(ApiResponse<object>.Fail("Kh�ng t�m th?y d�nh gi�"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy đánh giá"));
 
         testimonial.StudentName = request.StudentName;
         testimonial.JobTitle = request.JobTitle;
         testimonial.Content = request.Content;
         testimonial.Rating = request.Rating;
         testimonial.AvatarURL = request.AvatarURL;
+        testimonial.IsActive = request.IsActive;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<Testimonial>.Ok(testimonial, "C?p nh?t d�nh gi� th�nh c�ng"));
+        return Ok(ApiResponse<Testimonial>.Ok(testimonial, "Cập nhật đánh giá thành công"));
     }
 
-    /// <summary>
-    /// DELETE /api/testimonials/{id} � X�a d�nh gi�
-    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var testimonial = await _db.Testimonials.FindAsync(id);
         if (testimonial == null)
-            return NotFound(ApiResponse<object>.Fail("Kh�ng t�m th?y d�nh gi�"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy đánh giá"));
 
-        // Soft delete
         testimonial.IsActive = false;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { testimonial.TestimonialId }, "�� ?n d�nh gi�"));
+        return Ok(ApiResponse<object>.Ok(new { testimonial.TestimonialId }, "Đã ẩn đánh giá"));
     }
 }

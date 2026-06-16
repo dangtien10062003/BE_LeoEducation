@@ -8,6 +8,9 @@ public class Instructor
     [Key]
     public int Id { get; set; }
 
+    [StringLength(128)]
+    public string? HashCode { get; set; }
+
     [Required]
     [StringLength(100)]
     public string FullName { get; set; } = string.Empty;

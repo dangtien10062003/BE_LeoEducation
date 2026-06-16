@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -17,23 +18,34 @@ public class InstructorsController : ControllerBase
         _db = db;
     }
 
-    /// <summary>
-    /// GET /api/instructors ‚Äî L·∫•y danh s√°ch gi√°o vi√™n
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] ActiveFilterQuery request)
     {
-        var items = await _db.Instructors
-            .Where(i => i.IsActive)
+        var query = _db.Instructors.AsQueryable();
+
+        if (!request.IncludeInactive)
+            query = query.Where(i => i.IsActive);
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var keyword = request.Search.Trim().ToLower();
+            query = query.Where(i => i.FullName.ToLower().Contains(keyword)
+                                  || (i.Role != null && i.Role.ToLower().Contains(keyword))
+                                  || (i.Bio != null && i.Bio.ToLower().Contains(keyword))
+                                  || (i.Experience != null && i.Experience.ToLower().Contains(keyword)));
+        }
+
+        var total = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(i => i.Rating)
+            .Skip(request.Offset)
+            .Take(request.PageSize)
             .ToListAsync();
 
-        return Ok(ApiResponse<object>.Ok(items));
+        return Ok(PagedResponse<object>.Ok(items.Cast<object>().ToList(), request.PageIndex, request.PageSize, total));
     }
 
-    /// <summary>
-    /// GET /api/instructors/{id} ‚Äî Chi ti·∫øt gi√°o vi√™n
-    /// </summary>
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -44,9 +56,6 @@ public class InstructorsController : ControllerBase
         return Ok(ApiResponse<Instructor>.Ok(instructor));
     }
 
-    /// <summary>
-    /// POST /api/instructors ‚Äî Th√™m gi√°o vi√™n m·ªõi
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateInstructorRequest request)
     {
@@ -70,12 +79,12 @@ public class InstructorsController : ControllerBase
         _db.Instructors.Add(instructor);
         await _db.SaveChangesAsync();
 
+        instructor.HashCode = HashCodeGenerator.Generate(nameof(Instructor), instructor.Id);
+        await _db.SaveChangesAsync();
+
         return Ok(ApiResponse<Instructor>.Ok(instructor, "Th√™m gi√°o vi√™n th√†nh c√¥ng"));
     }
 
-    /// <summary>
-    /// PUT /api/instructors/{id} ó C?p nh?t gi·o viÍn
-    /// </summary>
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateInstructorRequest request)
     {
@@ -87,7 +96,7 @@ public class InstructorsController : ControllerBase
 
         var instructor = await _db.Instructors.FindAsync(id);
         if (instructor == null)
-            return NotFound(ApiResponse<object>.Fail("KhÙng tÏm th?y gi·o viÍn"));
+            return NotFound(ApiResponse<object>.Fail("Kh√¥ng t√¨m th·∫•y gi√°o vi√™n"));
 
         instructor.FullName = request.FullName;
         instructor.Role = request.Role;
@@ -97,23 +106,19 @@ public class InstructorsController : ControllerBase
         instructor.Experience = request.Experience;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<Instructor>.Ok(instructor, "C?p nh?t gi·o viÍn th‡nh cÙng"));
+        return Ok(ApiResponse<Instructor>.Ok(instructor, "C·∫≠p nh·∫≠t gi√°o vi√™n th√†nh c√¥ng"));
     }
 
-    /// <summary>
-    /// DELETE /api/instructors/{id} ó XÛa gi·o viÍn
-    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var instructor = await _db.Instructors.FindAsync(id);
         if (instructor == null)
-            return NotFound(ApiResponse<object>.Fail("KhÙng tÏm th?y gi·o viÍn"));
+            return NotFound(ApiResponse<object>.Fail("Kh√¥ng t√¨m th·∫•y gi√°o vi√™n"));
 
-        // Soft delete
         instructor.IsActive = false;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { instructor.Id }, "–„ ?n gi·o viÍn"));
+        return Ok(ApiResponse<object>.Ok(new { instructor.Id }, "ƒê√£ ·∫©n gi√°o vi√™n"));
     }
 }

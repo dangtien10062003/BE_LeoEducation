@@ -88,6 +88,47 @@ public class UpdateCourseRequest
     public decimal? Price { get; set; }
 }
 
+// ===== Class DTOs =====
+public class CreateClassRequest
+{
+    [Required(ErrorMessage = "Vui lòng nhập tên lớp")]
+    [StringLength(255)]
+    public string ClassName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Vui lòng chọn khóa học")]
+    [Range(1, int.MaxValue, ErrorMessage = "Khóa học không hợp lệ")]
+    public int CourseId { get; set; }
+
+    public int? SubjectId { get; set; }
+    public int? InstructorId { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng nhập ngày bắt đầu")]
+    public DateTime StartDate { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng nhập ngày kết thúc")]
+    public DateTime EndDate { get; set; }
+
+    [StringLength(50)]
+    public string Status { get; set; } = "Active";
+
+    [StringLength(500)]
+    public string? Note { get; set; }
+
+    public List<int> RegistrationIds { get; set; } = new();
+}
+
+public class UpdateClassRequest : CreateClassRequest
+{
+}
+
+public class ClassFilterQuery : PaginationQuery
+{
+    public int? CourseId { get; set; }
+    public int? SubjectId { get; set; }
+    public int? InstructorId { get; set; }
+    public string? TeachingStatus { get; set; }
+}
+
 // ===== Registration DTOs =====
 public class CreateRegistrationRequest
 {
@@ -134,6 +175,8 @@ public class CreateTestimonialRequest
 
     [StringLength(500)]
     public string? AvatarURL { get; set; }
+
+    public bool IsActive { get; set; } = true;
 }
 
 // ===== Instructor DTOs =====
@@ -178,29 +221,55 @@ public class CreateBlogRequest
 // ===== Pagination Query =====
 public class PaginationQuery
 {
-    private int _page = 1;
-    private int _limit = 10;
+    private int _pageIndex = 1;
+    private int _pageSize = 10;
+
+    public int PageIndex
+    {
+        get => _pageIndex;
+        set => _pageIndex = value < 1 ? 1 : value;
+    }
+
+    public int PageSize
+    {
+        get => _pageSize;
+        set => _pageSize = value < 1 ? 1 : (value > 100 ? 100 : value);
+    }
 
     public int Page
     {
-        get => _page;
-        set => _page = value < 1 ? 1 : value;
+        get => PageIndex;
+        set => PageIndex = value;
     }
 
     public int Limit
     {
-        get => _limit;
-        set => _limit = value < 1 ? 1 : (value > 100 ? 100 : value);
+        get => PageSize;
+        set => PageSize = value;
     }
 
-    public int Offset => (Page - 1) * Limit;
+    public int Offset => (PageIndex - 1) * PageSize;
+
+    public string? SearchTerm { get; set; }
+    public string? Keyword { get; set; }
+
+    public string? Search => !string.IsNullOrWhiteSpace(SearchTerm) ? SearchTerm : Keyword;
 }
 
 public class CourseFilterQuery : PaginationQuery
 {
-    public string? Keyword { get; set; }
     public string? Category { get; set; }
     public int? SubjectId { get; set; }
+}
+
+public class SubjectFilterQuery : PaginationQuery
+{
+    public bool IncludeInactive { get; set; } = false;
+}
+
+public class ActiveFilterQuery : PaginationQuery
+{
+    public bool IncludeInactive { get; set; } = false;
 }
 
 // ===== Response Wrappers =====
@@ -224,18 +293,22 @@ public class PagedResponse<T>
     public List<T> Data { get; set; } = new();
     public int Page { get; set; }
     public int Limit { get; set; }
+    public int PageIndex { get; set; }
+    public int PageSize { get; set; }
     public int Total { get; set; }
     public int TotalPages { get; set; }
 
-    public static PagedResponse<T> Ok(List<T> data, int page, int limit, int total, string message = "Thành công")
+    public static PagedResponse<T> Ok(List<T> data, int pageIndex, int pageSize, int total, string message = "Thành công")
         => new()
         {
             Success = true,
             Message = message,
             Data = data,
-            Page = page,
-            Limit = limit,
+            Page = pageIndex,
+            Limit = pageSize,
+            PageIndex = pageIndex,
+            PageSize = pageSize,
             Total = total,
-            TotalPages = (int)Math.Ceiling((double)total / limit)
+            TotalPages = (int)Math.Ceiling((double)total / pageSize)
         };
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -25,11 +26,13 @@ public class CoursesController : ControllerBase
             .Include(c => c.Instructor)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(query.Keyword))
+        if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var keyword = query.Keyword.ToLower();
+            var keyword = query.Search.Trim().ToLower();
             q = q.Where(c => c.CourseName.ToLower().Contains(keyword)
-                          || (c.Description != null && c.Description.ToLower().Contains(keyword)));
+                          || (c.Description != null && c.Description.ToLower().Contains(keyword))
+                          || (c.Subject != null && c.Subject.SubjectName.ToLower().Contains(keyword))
+                          || (c.Instructor != null && c.Instructor.FullName.ToLower().Contains(keyword)));
         }
 
         if (query.SubjectId.HasValue)
@@ -40,7 +43,7 @@ public class CoursesController : ControllerBase
         var items = await q
             .OrderByDescending(c => c.CreatedAt)
             .Skip(query.Offset)
-            .Take(query.Limit)
+            .Take(query.PageSize)
             .Select(c => new
             {
                 c.CourseId,
@@ -78,10 +81,12 @@ public class CoursesController : ControllerBase
             success = true,
             message = "Thành công",
             data = items,
-            page = query.Page,
-            limit = query.Limit,
+            pageIndex = query.PageIndex,
+            pageSize = query.PageSize,
+            page = query.PageIndex,
+            limit = query.PageSize,
             total,
-            totalPages = (int)Math.Ceiling((double)total / query.Limit)
+            totalPages = (int)Math.Ceiling((double)total / query.PageSize)
         });
     }
 
@@ -154,6 +159,9 @@ public class CoursesController : ControllerBase
         };
 
         _db.Courses.Add(course);
+        await _db.SaveChangesAsync();
+
+        course.HashCode = HashCodeGenerator.Generate(nameof(Course), course.CourseId);
         await _db.SaveChangesAsync();
 
         return Ok(ApiResponse<object>.Ok(new { course.CourseId }, "Tạo khóa học thành công"));

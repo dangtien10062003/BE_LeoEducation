@@ -9,6 +9,10 @@ public class CourseRegistration
     [Column("registrationId")]
     public int RegistrationId { get; set; }
 
+    [Column("hashCode")]
+    [StringLength(128)]
+    public string? HashCode { get; set; }
+
     [Required]
     [Column("fullName")]
     [StringLength(255)]
@@ -37,4 +41,5 @@ public class CourseRegistration
 
     // Navigation
     public Course Course { get; set; } = null!;
+    public ICollection<ClassStudent> ClassStudents { get; set; } = new List<ClassStudent>();
 }

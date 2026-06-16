@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -17,22 +18,31 @@ public class BlogsController : ControllerBase
         _db = db;
     }
 
-    /// <summary>
-    /// GET /api/blogs — Lấy danh sách bài viết
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] PaginationQuery request)
     {
-        var items = await _db.Blogs
+        var query = _db.Blogs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var keyword = request.Search.Trim().ToLower();
+            query = query.Where(b => b.Title.ToLower().Contains(keyword)
+                                  || (b.Summary != null && b.Summary.ToLower().Contains(keyword))
+                                  || (b.Content != null && b.Content.ToLower().Contains(keyword))
+                                  || (b.Author != null && b.Author.ToLower().Contains(keyword)));
+        }
+
+        var total = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(b => b.CreatedAt)
+            .Skip(request.Offset)
+            .Take(request.PageSize)
             .ToListAsync();
 
-        return Ok(ApiResponse<object>.Ok(items));
+        return Ok(PagedResponse<object>.Ok(items.Cast<object>().ToList(), request.PageIndex, request.PageSize, total));
     }
 
-    /// <summary>
-    /// GET /api/blogs/{id} — Chi tiết bài viết
-    /// </summary>
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -43,9 +53,6 @@ public class BlogsController : ControllerBase
         return Ok(ApiResponse<Blog>.Ok(blog));
     }
 
-    /// <summary>
-    /// POST /api/blogs — Tạo bài viết mới
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBlogRequest request)
     {
@@ -68,12 +75,12 @@ public class BlogsController : ControllerBase
         _db.Blogs.Add(blog);
         await _db.SaveChangesAsync();
 
+        blog.HashCode = HashCodeGenerator.Generate(nameof(Blog), blog.Id);
+        await _db.SaveChangesAsync();
+
         return Ok(ApiResponse<Blog>.Ok(blog, "Tạo bài viết thành công"));
     }
 
-    /// <summary>
-    /// PUT /api/blogs/{id} � C?p nh?t b�i vi?t
-    /// </summary>
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateBlogRequest request)
     {
@@ -85,7 +92,7 @@ public class BlogsController : ControllerBase
 
         var blog = await _db.Blogs.FindAsync(id);
         if (blog == null)
-            return NotFound(ApiResponse<object>.Fail("Kh�ng t�m th?y b�i vi?t"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy bài viết"));
 
         blog.Title = request.Title;
         blog.Summary = request.Summary;
@@ -94,22 +101,19 @@ public class BlogsController : ControllerBase
         blog.Author = request.Author;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<Blog>.Ok(blog, "C?p nh?t b�i vi?t th�nh c�ng"));
+        return Ok(ApiResponse<Blog>.Ok(blog, "Cập nhật bài viết thành công"));
     }
 
-    /// <summary>
-    /// DELETE /api/blogs/{id} � X�a b�i vi?t
-    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var blog = await _db.Blogs.FindAsync(id);
         if (blog == null)
-            return NotFound(ApiResponse<object>.Fail("Kh�ng t�m th?y b�i vi?t"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy bài viết"));
 
         _db.Blogs.Remove(blog);
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { blog.Id }, "�� x�a b�i vi?t"));
+        return Ok(ApiResponse<object>.Ok(new { blog.Id }, "Đã xóa bài viết"));
     }
 }

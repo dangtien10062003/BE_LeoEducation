@@ -4,6 +4,7 @@ using LeoEducation.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LeoEducation.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260616064911_AddHashCodesAndPagedLists")]
+    partial class AddHashCodesAndPagedLists
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,29 +66,6 @@ namespace LeoEducation.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Blogs", (string)null);
-                });
-
-            modelBuilder.Entity("LeoEducation.Api.Models.ClassStudent", b =>
-                {
-                    b.Property<int>("ClassId")
-                        .HasColumnType("int")
-                        .HasColumnName("classId");
-
-                    b.Property<int>("RegistrationId")
-                        .HasColumnType("int")
-                        .HasColumnName("registrationId");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("createdAt")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.HasKey("ClassId", "RegistrationId");
-
-                    b.HasIndex("RegistrationId");
-
-                    b.ToTable("TeachingClassStudents", (string)null);
                 });
 
             modelBuilder.Entity("LeoEducation.Api.Models.ContactRequest", b =>
@@ -411,82 +391,6 @@ namespace LeoEducation.Api.Migrations
                         });
                 });
 
-            modelBuilder.Entity("LeoEducation.Api.Models.TeachingClass", b =>
-                {
-                    b.Property<int>("ClassId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("classId");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClassId"));
-
-                    b.Property<string>("ClassName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("className");
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("int")
-                        .HasColumnName("courseId");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("createdAt")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("endDate");
-
-                    b.Property<string>("HashCode")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)")
-                        .HasColumnName("hashCode");
-
-                    b.Property<int?>("InstructorId")
-                        .HasColumnType("int")
-                        .HasColumnName("instructorId");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("note");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("startDate");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasDefaultValue("Active")
-                        .HasColumnName("status");
-
-                    b.Property<int?>("SubjectId")
-                        .HasColumnType("int")
-                        .HasColumnName("subjectId");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("updatedAt")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.HasKey("ClassId");
-
-                    b.HasIndex("CourseId");
-
-                    b.HasIndex("InstructorId");
-
-                    b.HasIndex("SubjectId");
-
-                    b.ToTable("TeachingClasses", (string)null);
-                });
-
             modelBuilder.Entity("LeoEducation.Api.Models.Testimonial", b =>
                 {
                     b.Property<int>("TestimonialId")
@@ -607,25 +511,6 @@ namespace LeoEducation.Api.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("LeoEducation.Api.Models.ClassStudent", b =>
-                {
-                    b.HasOne("LeoEducation.Api.Models.TeachingClass", "Class")
-                        .WithMany("Students")
-                        .HasForeignKey("ClassId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LeoEducation.Api.Models.CourseRegistration", "Registration")
-                        .WithMany("ClassStudents")
-                        .HasForeignKey("RegistrationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Class");
-
-                    b.Navigation("Registration");
-                });
-
             modelBuilder.Entity("LeoEducation.Api.Models.Course", b =>
                 {
                     b.HasOne("LeoEducation.Api.Models.Instructor", "Instructor")
@@ -655,51 +540,14 @@ namespace LeoEducation.Api.Migrations
                     b.Navigation("Course");
                 });
 
-            modelBuilder.Entity("LeoEducation.Api.Models.TeachingClass", b =>
-                {
-                    b.HasOne("LeoEducation.Api.Models.Course", "Course")
-                        .WithMany("Classes")
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LeoEducation.Api.Models.Instructor", "Instructor")
-                        .WithMany()
-                        .HasForeignKey("InstructorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("LeoEducation.Api.Models.Subject", "Subject")
-                        .WithMany()
-                        .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Instructor");
-
-                    b.Navigation("Subject");
-                });
-
             modelBuilder.Entity("LeoEducation.Api.Models.Course", b =>
                 {
-                    b.Navigation("Classes");
-
                     b.Navigation("Registrations");
-                });
-
-            modelBuilder.Entity("LeoEducation.Api.Models.CourseRegistration", b =>
-                {
-                    b.Navigation("ClassStudents");
                 });
 
             modelBuilder.Entity("LeoEducation.Api.Models.Subject", b =>
                 {
                     b.Navigation("Courses");
-                });
-
-            modelBuilder.Entity("LeoEducation.Api.Models.TeachingClass", b =>
-                {
-                    b.Navigation("Students");
                 });
 #pragma warning restore 612, 618
         }

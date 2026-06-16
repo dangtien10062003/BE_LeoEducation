@@ -8,6 +8,9 @@ public class Course
     [Key]
     public int CourseId { get; set; }
 
+    [StringLength(128)]
+    public string? HashCode { get; set; }
+
     [Required]
     [StringLength(255)]
     public string CourseName { get; set; } = string.Empty;
@@ -27,6 +30,7 @@ public class Course
     public Subject? Subject { get; set; }
     public Instructor? Instructor { get; set; }
     public ICollection<CourseRegistration> Registrations { get; set; } = new List<CourseRegistration>();
+    public ICollection<TeachingClass> Classes { get; set; } = new List<TeachingClass>();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

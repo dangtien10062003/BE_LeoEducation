@@ -9,6 +9,10 @@ public class Testimonial
     [Column("testimonialId")]
     public int TestimonialId { get; set; }
 
+    [Column("hashCode")]
+    [StringLength(128)]
+    public string? HashCode { get; set; }
+
     [Required]
     [Column("studentName")]
     [StringLength(255)]

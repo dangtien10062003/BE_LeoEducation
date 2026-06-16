@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -17,9 +18,6 @@ public class ContactController : ControllerBase
         _db = db;
     }
 
-    /// <summary>
-    /// POST /api/contact — Gửi yêu cầu tư vấn
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateContactRequest request)
     {
@@ -43,25 +41,38 @@ public class ContactController : ControllerBase
         _db.ContactRequests.Add(contact);
         await _db.SaveChangesAsync();
 
+        contact.HashCode = HashCodeGenerator.Generate(nameof(ContactRequest), contact.Id);
+        await _db.SaveChangesAsync();
+
         return Ok(ApiResponse<object>.Ok(new { contact.Id }, "Gửi yêu cầu thành công! Chúng tôi sẽ liên hệ với bạn sớm."));
     }
 
-    /// <summary>
-    /// GET /api/contact — Lấy danh sách yêu cầu (Admin)
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] PaginationQuery request)
     {
-        var items = await _db.ContactRequests
+        var query = _db.ContactRequests.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var keyword = request.Search.Trim().ToLower();
+            query = query.Where(c => c.FullName.ToLower().Contains(keyword)
+                                  || c.Email.ToLower().Contains(keyword)
+                                  || c.Phone.ToLower().Contains(keyword)
+                                  || c.Status.ToLower().Contains(keyword)
+                                  || (c.Message != null && c.Message.ToLower().Contains(keyword)));
+        }
+
+        var total = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(c => c.CreatedAt)
+            .Skip(request.Offset)
+            .Take(request.PageSize)
             .ToListAsync();
 
-        return Ok(ApiResponse<object>.Ok(items));
+        return Ok(PagedResponse<object>.Ok(items.Cast<object>().ToList(), request.PageIndex, request.PageSize, total));
     }
 
-    /// <summary>
-    /// PATCH /api/contact/{id} — Cập nhật trạng thái
-    /// </summary>
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateContactStatusRequest request)
     {
@@ -82,9 +93,6 @@ public class ContactController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { contact.Id, contact.Status }, "Cập nhật trạng thái thành công"));
     }
 
-    /// <summary>
-    /// PUT /api/contact/{id} � C?p nh?t li�n h?
-    /// </summary>
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateContactRequest request)
     {
@@ -96,7 +104,7 @@ public class ContactController : ControllerBase
 
         var contact = await _db.ContactRequests.FindAsync(id);
         if (contact == null)
-            return NotFound(ApiResponse<object>.Fail("Kh�ng t�m th?y y�u c?u li�n h?"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy yêu cầu liên hệ"));
 
         contact.FullName = request.FullName;
         contact.Email = request.Email;
@@ -105,22 +113,19 @@ public class ContactController : ControllerBase
         contact.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { contact.Id }, "C?p nh?t li�n h? th�nh c�ng"));
+        return Ok(ApiResponse<object>.Ok(new { contact.Id }, "Cập nhật liên hệ thành công"));
     }
 
-    /// <summary>
-    /// DELETE /api/contact/{id} � X�a li�n h?
-    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var contact = await _db.ContactRequests.FindAsync(id);
         if (contact == null)
-            return NotFound(ApiResponse<object>.Fail("Kh�ng t�m th?y y�u c?u li�n h?"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy yêu cầu liên hệ"));
 
         _db.ContactRequests.Remove(contact);
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { contact.Id }, "�� x�a li�n h?"));
+        return Ok(ApiResponse<object>.Ok(new { contact.Id }, "Đã xóa liên hệ"));
     }
 }

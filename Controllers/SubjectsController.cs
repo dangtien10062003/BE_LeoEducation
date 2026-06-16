@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -18,17 +19,28 @@ public class SubjectsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
+    public async Task<IActionResult> GetAll([FromQuery] SubjectFilterQuery request)
     {
         var query = _db.Subjects
             .Include(s => s.Courses)
             .AsQueryable();
 
-        if (!includeInactive)
+        if (!request.IncludeInactive)
             query = query.Where(s => s.IsActive);
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var keyword = request.Search.Trim().ToLower();
+            query = query.Where(s => s.SubjectName.ToLower().Contains(keyword)
+                                  || (s.Description != null && s.Description.ToLower().Contains(keyword)));
+        }
+
+        var total = await query.CountAsync();
 
         var subjects = await query
             .OrderBy(s => s.SubjectName)
+            .Skip(request.Offset)
+            .Take(request.PageSize)
             .Select(s => new
             {
                 s.SubjectId,
@@ -42,7 +54,7 @@ public class SubjectsController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<object>.Ok(subjects));
+        return Ok(PagedResponse<object>.Ok(subjects.Cast<object>().ToList(), request.PageIndex, request.PageSize, total));
     }
 
     [HttpGet("{id}")]
@@ -81,6 +93,9 @@ public class SubjectsController : ControllerBase
         };
 
         _db.Subjects.Add(subject);
+        await _db.SaveChangesAsync();
+
+        subject.HashCode = HashCodeGenerator.Generate(nameof(Subject), subject.SubjectId);
         await _db.SaveChangesAsync();
 
         return Ok(ApiResponse<Subject>.Ok(subject, "Tạo môn học thành công"));

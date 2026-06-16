@@ -7,6 +7,9 @@ public class Blog
     [Key]
     public int Id { get; set; }
 
+    [StringLength(128)]
+    public string? HashCode { get; set; }
+
     [Required]
     [StringLength(250)]
     public string Title { get; set; } = string.Empty;

@@ -7,6 +7,9 @@ public class Subject
     [Key]
     public int SubjectId { get; set; }
 
+    [StringLength(128)]
+    public string? HashCode { get; set; }
+
     [Required]
     [StringLength(150)]
     public string SubjectName { get; set; } = string.Empty;
