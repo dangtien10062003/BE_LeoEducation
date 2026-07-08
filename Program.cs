@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 LoadDotEnv(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
+ConfigureRenderPort();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -125,4 +126,13 @@ static void LoadDotEnv(string path)
         if (!string.IsNullOrWhiteSpace(key) && Environment.GetEnvironmentVariable(key) is null)
             Environment.SetEnvironmentVariable(key, value);
     }
+}
+
+static void ConfigureRenderPort()
+{
+    if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not null)
+        return;
+
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+    Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://0.0.0.0:{port}");
 }
