@@ -101,6 +101,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowReactFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 
 app.Run();
