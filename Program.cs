@@ -19,7 +19,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.SetIsOriginAllowed(origin => IsAllowedCorsOrigin(origin, allowedOrigins))
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -136,4 +136,17 @@ static void ConfigureRenderPort()
 
     var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
     Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://0.0.0.0:{port}");
+}
+
+static bool IsAllowedCorsOrigin(string origin, string[] configuredOrigins)
+{
+    if (configuredOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+        return true;
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        return false;
+
+    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
 }
