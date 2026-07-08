@@ -21,7 +21,19 @@ public class HealthCheckController : ControllerBase
         try
         {
             await _db.Database.CanConnectAsync();
-            return Ok(new { success = true, message = "Server is running", data = new { status = "OK", database = "Connected" } });
+            var users = await _db.Users.CountAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "Server is running",
+                data = new
+                {
+                    status = "OK",
+                    database = "Connected",
+                    users
+                }
+            });
         }
         catch (Exception ex)
         {
