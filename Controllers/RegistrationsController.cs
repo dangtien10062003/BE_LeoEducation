@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
@@ -19,7 +19,7 @@ public class RegistrationsController : ControllerBase
     }
 
     /// <summary>
-    /// POST /api/registrations â€” ÄÄƒng kÃ½ khÃ³a há»c
+    /// POST /api/registrations - Đăng ký khóa học
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRegistrationRequest request)
@@ -30,10 +30,9 @@ public class RegistrationsController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(string.Join("; ", errors)));
         }
 
-        // Verify course exists
         var course = await _db.Courses.FirstOrDefaultAsync(c => c.CourseId == request.CourseId);
         if (course == null)
-            return BadRequest(ApiResponse<object>.Fail("KhÃ³a há»c khÃ´ng tá»“n táº¡i hoáº·c Ä‘Ã£ Ä‘Ã³ng"));
+            return BadRequest(ApiResponse<object>.Fail("Khóa học không tồn tại hoặc đã đóng"));
 
         var registration = new CourseRegistration
         {
@@ -41,7 +40,7 @@ public class RegistrationsController : ControllerBase
             Email = request.Email,
             Phone = request.Phone,
             CourseId = request.CourseId,
-            Status = "Má»›i",
+            Status = "Mới",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -53,11 +52,11 @@ public class RegistrationsController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(
             new { registration.RegistrationId, CourseName = course.CourseName },
-            "ÄÄƒng kÃ½ thÃ nh cÃ´ng! ChÃºng tÃ´i sáº½ liÃªn há»‡ vá»›i báº¡n sá»›m."));
+            "Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm."));
     }
 
     /// <summary>
-    /// GET /api/registrations â€” Láº¥y danh sÃ¡ch Ä‘Äƒng kÃ½ (Admin)
+    /// GET /api/registrations - Lấy danh sách đăng ký (Admin)
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] PaginationQuery request)
@@ -99,7 +98,7 @@ public class RegistrationsController : ControllerBase
     }
 
     /// <summary>
-    /// PATCH /api/registrations/{id} â€” Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Äƒng kÃ½
+    /// PATCH /api/registrations/{id} - Cập nhật trạng thái đăng ký
     /// </summary>
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateRegistrationStatusRequest request)
@@ -112,18 +111,18 @@ public class RegistrationsController : ControllerBase
 
         var registration = await _db.CourseRegistrations.FindAsync(id);
         if (registration == null)
-            return NotFound(ApiResponse<object>.Fail("KhÃ´ng tÃ¬m tháº¥y Ä‘Äƒng kÃ½"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy đăng ký"));
 
         registration.Status = request.Status;
         await _db.SaveChangesAsync();
 
         return Ok(ApiResponse<object>.Ok(
             new { registration.RegistrationId, registration.Status },
-            "Cáº­p nháº­t tráº¡ng thÃ¡i thÃ nh cÃ´ng"));
+            "Cập nhật trạng thái thành công"));
     }
 
     /// <summary>
-    /// PUT /api/registrations/{id} — C?p nh?t toàn b? dang ký
+    /// PUT /api/registrations/{id} - Cập nhật toàn bộ đăng ký
     /// </summary>
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateRegistrationRequest request)
@@ -136,11 +135,11 @@ public class RegistrationsController : ControllerBase
 
         var registration = await _db.CourseRegistrations.FindAsync(id);
         if (registration == null)
-            return NotFound(ApiResponse<object>.Fail("Không tìm th?y dang ký"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy đăng ký"));
 
         var course = await _db.Courses.FirstOrDefaultAsync(c => c.CourseId == request.CourseId);
         if (course == null)
-            return BadRequest(ApiResponse<object>.Fail("Khóa h?c không t?n t?i"));
+            return BadRequest(ApiResponse<object>.Fail("Khóa học không tồn tại"));
 
         registration.FullName = request.FullName;
         registration.Email = request.Email;
@@ -150,24 +149,22 @@ public class RegistrationsController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(
             new { registration.RegistrationId, CourseName = course.CourseName },
-            "C?p nh?t dang ký thành công"));
+            "Cập nhật đăng ký thành công"));
     }
 
     /// <summary>
-    /// DELETE /api/registrations/{id} — Xóa dang ký
+    /// DELETE /api/registrations/{id} - Xóa đăng ký
     /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var registration = await _db.CourseRegistrations.FindAsync(id);
         if (registration == null)
-            return NotFound(ApiResponse<object>.Fail("Không tìm th?y dang ký"));
+            return NotFound(ApiResponse<object>.Fail("Không tìm thấy đăng ký"));
 
         _db.CourseRegistrations.Remove(registration);
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { registration.RegistrationId }, "Ðã xóa dang ký"));
+        return Ok(ApiResponse<object>.Ok(new { registration.RegistrationId }, "Đã xóa đăng ký"));
     }
 }
-
-

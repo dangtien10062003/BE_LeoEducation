@@ -5,7 +5,7 @@ namespace LeoEducation.Api.DTOs;
 public class LoginRequest
 {
     [Required(ErrorMessage = "Vui lòng nhập email")]
-    public string Username { get; set; } = string.Empty; // Email field (kept as Username for FE compatibility)
+    public string Username { get; set; } = string.Empty; // Email field kept as Username for FE compatibility.
 
     [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
     [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
@@ -48,9 +48,11 @@ public class AuthResponse
     public string Token { get; set; } = string.Empty;
 }
 
-
 public class TestLoginRequest
 {
-    [Required] public string Email { get; set; } = string.Empty;
-    [Required] public string Password { get; set; } = string.Empty;
+    [Required]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
 }

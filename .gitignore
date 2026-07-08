@@ -8,6 +8,9 @@ obj/
 *.tmp
 test-login.json
 appsettings.Development.json
+.env
+.env.*
+!.env.example
 *.db
 *.bak
 *.bacpac

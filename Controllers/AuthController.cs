@@ -17,11 +17,13 @@ public class AuthController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
     private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
 
-    public AuthController(ApplicationDbContext db, IConfiguration config)
+    public AuthController(ApplicationDbContext db, IConfiguration config, IWebHostEnvironment env)
     {
         _db = db;
         _config = config;
+        _env = env;
     }
 
     /// <summary>
@@ -36,30 +38,25 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(string.Join("; ", errors)));
         }
 
-        // Find user by email
-        var user = await _db.Users.FirstOrDefaultAsync(u =>
-            u.Email == request.Username);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Username);
 
-        if (user == null || user?.Status?.ToLower() != "active")
+        if (user == null || !string.Equals(user.Status, "Active", StringComparison.OrdinalIgnoreCase))
             return Unauthorized(ApiResponse<object>.Fail("Sai email hoặc mật khẩu"));
 
-        // Verify password (BCrypt)
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return Unauthorized(ApiResponse<object>.Fail("Sai email hoặc mật khẩu"));
 
-        // Update last login
         user.LastLoginAt = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        // Generate JWT
         var token = GenerateJwtToken(user);
 
         return Ok(ApiResponse<AuthResponse>.Ok(new AuthResponse
         {
             Id = user.Id,
             Username = user.Email ?? user.Phone,
-            Email = user.Email,
+            Email = user.Email ?? string.Empty,
             FullName = user.FullName,
             Role = "Admin",
             Token = token
@@ -78,7 +75,6 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(string.Join("; ", errors)));
         }
 
-        // Check duplicate email
         if (await _db.Users.AnyAsync(u => u.Email == request.Email))
             return BadRequest(ApiResponse<object>.Fail("Email đã tồn tại"));
 
@@ -101,7 +97,7 @@ public class AuthController : ControllerBase
         {
             Id = user.Id,
             Username = user.Email ?? user.Phone,
-            Email = user.Email,
+            Email = user.Email ?? string.Empty,
             FullName = user.FullName,
             Role = "Admin",
             Token = token
@@ -167,35 +163,39 @@ public class AuthController : ControllerBase
         }));
     }
 
-    
     /// <summary>
-    /// POST /api/auth/test-login � Test login with plain password (dev only)
+    /// POST /api/auth/test-login - Dev-only password verification helper.
     /// </summary>
     [HttpPost("test-login")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> TestLogin([FromBody] TestLoginRequest request)
     {
+        if (!_env.IsDevelopment())
+            return NotFound();
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         if (user == null)
             return NotFound(ApiResponse<object>.Fail("User not found"));
 
-        // Create new hash for comparison
         var newHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-        
+
         return Ok(ApiResponse<object>.Ok(new
         {
             user.Email,
             user.FullName,
             user.Status,
-            StoredHash = user.PasswordHash.Substring(0, 20) + "...",
-            TestHash = newHash.Substring(0, 20) + "...",
-            // Try verify
+            StoredHash = user.PasswordHash.Length > 20 ? user.PasswordHash[..20] + "..." : user.PasswordHash,
+            TestHash = newHash[..20] + "...",
             VerifyWithStored = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)
         }));
     }
 
     private string GenerateJwtToken(User user)
     {
-        var jwtKey = _config["Jwt:Key"] ?? "LeoEducation_SecretKey_2026_VeryLongKey_AtLeast32Chars!";
+        var jwtKey = _config["Jwt:Key"]
+            ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(jwtKey))
+            throw new InvalidOperationException("Missing Jwt:Key configuration.");
         var jwtIssuer = _config["Jwt:Issuer"] ?? "LeoEducation";
         var jwtExpiry = int.Parse(_config["Jwt:ExpiryMinutes"] ?? "1440");
 
@@ -206,9 +206,9 @@ public class AuthController : ControllerBase
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Email ?? user.Phone),
-            new Claim(ClaimTypes.Email, user.Email ?? ""),
+            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
             new Claim(ClaimTypes.Role, "Admin"),
-            new Claim("fullName", user.FullName ?? "")
+            new Claim("fullName", user.FullName)
         };
 
         var token = new JwtSecurityToken(
