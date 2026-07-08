@@ -33,7 +33,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection configuration.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString));
 
 // ===== JWT Authentication =====
 var jwtKey = builder.Configuration["Jwt:Key"]

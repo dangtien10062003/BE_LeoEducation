@@ -5,7 +5,16 @@ namespace LeoEducation.Api.Data;
 
 public class ApplicationDbContext : DbContext
 {
+    private const string CurrentTimestampSql = "CURRENT_TIMESTAMP";
+    private static readonly DateTime SeedCreatedAt = new(2026, 1, 1);
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveColumnType("timestamp without time zone");
+        configurationBuilder.Properties<DateTime?>().HaveColumnType("timestamp without time zone");
+    }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -38,15 +47,15 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
             entity.Property(e => e.ImageUrl).HasColumnName("imageUrl").HasMaxLength(500);
             entity.Property(e => e.IsActive).HasColumnName("isActive").HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
+            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql(CurrentTimestampSql);
             entity.HasData(
-                new Subject { SubjectId = 1, SubjectName = "Tiếng Anh", Description = "Các khóa học tiếng Anh", IsActive = true, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
-                new Subject { SubjectId = 2, SubjectName = "Toán", Description = "Các khóa học toán học", IsActive = true, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
-                new Subject { SubjectId = 3, SubjectName = "Vật lý", Description = "Các khóa học vật lý", IsActive = true, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
-                new Subject { SubjectId = 4, SubjectName = "Hóa học", Description = "Các khóa học hóa học", IsActive = true, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
-                new Subject { SubjectId = 5, SubjectName = "Ngữ văn", Description = "Các khóa học ngữ văn", IsActive = true, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) },
-                new Subject { SubjectId = 6, SubjectName = "Sinh học", Description = "Các khóa học sinh học", IsActive = true, CreatedAt = new DateTime(2026, 1, 1), UpdatedAt = new DateTime(2026, 1, 1) }
+                new Subject { SubjectId = 1, SubjectName = "Tiếng Anh", Description = "Các khóa học tiếng Anh", IsActive = true, CreatedAt = SeedCreatedAt, UpdatedAt = SeedCreatedAt },
+                new Subject { SubjectId = 2, SubjectName = "Toán", Description = "Các khóa học toán học", IsActive = true, CreatedAt = SeedCreatedAt, UpdatedAt = SeedCreatedAt },
+                new Subject { SubjectId = 3, SubjectName = "Vật lý", Description = "Các khóa học vật lý", IsActive = true, CreatedAt = SeedCreatedAt, UpdatedAt = SeedCreatedAt },
+                new Subject { SubjectId = 4, SubjectName = "Hóa học", Description = "Các khóa học hóa học", IsActive = true, CreatedAt = SeedCreatedAt, UpdatedAt = SeedCreatedAt },
+                new Subject { SubjectId = 5, SubjectName = "Ngữ văn", Description = "Các khóa học ngữ văn", IsActive = true, CreatedAt = SeedCreatedAt, UpdatedAt = SeedCreatedAt },
+                new Subject { SubjectId = 6, SubjectName = "Sinh học", Description = "Các khóa học sinh học", IsActive = true, CreatedAt = SeedCreatedAt, UpdatedAt = SeedCreatedAt }
             );
         });
 
@@ -62,8 +71,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.SubjectId).HasColumnName("subjectId");
             entity.Property(e => e.InstructorId).HasColumnName("instructorId");
             entity.Property(e => e.Price).HasColumnName("price").HasColumnType("decimal(18,2)");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
+            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql(CurrentTimestampSql);
             entity.HasOne(e => e.Subject)
                   .WithMany(s => s.Courses)
                   .HasForeignKey(e => e.SubjectId)
@@ -89,8 +98,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.EndDate).HasColumnName("endDate");
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Active");
             entity.Property(e => e.Note).HasColumnName("note").HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
+            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql(CurrentTimestampSql);
 
             entity.HasOne(e => e.Course)
                   .WithMany(c => c.Classes)
@@ -112,7 +121,7 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => new { e.ClassId, e.RegistrationId });
             entity.Property(e => e.ClassId).HasColumnName("classId");
             entity.Property(e => e.RegistrationId).HasColumnName("registrationId");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
 
             entity.HasOne(e => e.Class)
                   .WithMany(c => c.Students)
@@ -136,7 +145,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Phone).HasColumnName("phone").IsRequired().HasMaxLength(20);
             entity.Property(e => e.CourseId).HasColumnName("courseId");
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Mới");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
             entity.HasOne(e => e.Course)
                   .WithMany(c => c.Registrations)
                   .HasForeignKey(e => e.CourseId)
@@ -156,7 +165,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Rating).HasColumnName("rating").HasDefaultValue(5);
             entity.Property(e => e.AvatarURL).HasColumnName("avatarURL").HasMaxLength(500);
             entity.Property(e => e.IsActive).HasColumnName("isActive").HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
         });
 
         // ===== Instructors =====
@@ -183,8 +192,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Phone).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("New");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql(CurrentTimestampSql);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql(CurrentTimestampSql);
         });
 
         // ===== Blogs =====
@@ -197,7 +206,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Summary).HasMaxLength(500);
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
             entity.Property(e => e.Author).HasMaxLength(100);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql(CurrentTimestampSql);
         });
 
         // ===== Users (existing table) =====
