@@ -1,5 +1,6 @@
 using LeoEducation.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace LeoEducation.Api.Data;
 
@@ -12,8 +13,12 @@ public class ApplicationDbContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTime>().HaveColumnType("timestamp without time zone");
-        configurationBuilder.Properties<DateTime?>().HaveColumnType("timestamp without time zone");
+        configurationBuilder.Properties<DateTime>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<DateTimeUnspecifiedKindConverter>();
+        configurationBuilder.Properties<DateTime?>()
+            .HaveColumnType("timestamp without time zone")
+            .HaveConversion<NullableDateTimeUnspecifiedKindConverter>();
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -224,5 +229,25 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasColumnName("createdAt");
             entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt");
         });
+    }
+
+    private sealed class DateTimeUnspecifiedKindConverter : ValueConverter<DateTime, DateTime>
+    {
+        public DateTimeUnspecifiedKindConverter()
+            : base(
+                value => DateTime.SpecifyKind(value, DateTimeKind.Unspecified),
+                value => DateTime.SpecifyKind(value, DateTimeKind.Utc))
+        {
+        }
+    }
+
+    private sealed class NullableDateTimeUnspecifiedKindConverter : ValueConverter<DateTime?, DateTime?>
+    {
+        public NullableDateTimeUnspecifiedKindConverter()
+            : base(
+                value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Unspecified) : value,
+                value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : value)
+        {
+        }
     }
 }
