@@ -3,6 +3,7 @@ using System;
 using LeoEducation.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LeoEducation.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714025928_AddCourseRegistrationNote")]
+    partial class AddCourseRegistrationNote
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -88,60 +91,6 @@ namespace LeoEducation.Api.Migrations
                     b.ToTable("TeachingClassStudents", (string)null);
                 });
 
-            modelBuilder.Entity("LeoEducation.Api.Models.ConsultationLog", b =>
-                {
-                    b.Property<int>("ConsultationLogId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("consultationLogId");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ConsultationLogId"));
-
-                    b.Property<string>("Channel")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("channel");
-
-                    b.Property<DateTime>("ContactedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("contactedAt")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdAt")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("note");
-
-                    b.Property<int>("RegistrationId")
-                        .HasColumnType("integer")
-                        .HasColumnName("registrationId");
-
-                    b.Property<string>("Result")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("result");
-
-                    b.Property<string>("StaffName")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("staffName");
-
-                    b.HasKey("ConsultationLogId");
-
-                    b.HasIndex("RegistrationId");
-
-                    b.ToTable("ConsultationLogs", (string)null);
-                });
-
             modelBuilder.Entity("LeoEducation.Api.Models.ContactRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -204,14 +153,6 @@ namespace LeoEducation.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CourseId"));
 
-                    b.Property<string>("BillingType")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasDefaultValue("FullCourse")
-                        .HasColumnName("billingType");
-
                     b.Property<string>("CourseName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -228,19 +169,10 @@ namespace LeoEducation.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("endDate");
-
                     b.Property<string>("HashCode")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("hashCode");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("imageUrl");
 
                     b.Property<int?>("InstructorId")
                         .HasColumnType("integer")
@@ -249,10 +181,6 @@ namespace LeoEducation.Api.Migrations
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("price");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("startDate");
 
                     b.Property<int?>("SubjectId")
                         .HasColumnType("integer")
@@ -308,39 +236,16 @@ namespace LeoEducation.Api.Migrations
                         .HasColumnType("character varying(128)")
                         .HasColumnName("hashCode");
 
-                    b.Property<DateTime?>("LastPaymentAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("lastPaymentAt");
-
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("note");
-
-                    b.Property<decimal>("PaidAmount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("paidAmount");
-
-                    b.Property<string>("PaymentMode")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("paymentMode");
 
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("phone");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasDefaultValue("Website")
-                        .HasColumnName("source");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -350,20 +255,9 @@ namespace LeoEducation.Api.Migrations
                         .HasDefaultValue("Mới")
                         .HasColumnName("status");
 
-                    b.Property<int?>("StudentId")
-                        .HasColumnType("integer")
-                        .HasColumnName("studentId");
-
-                    b.Property<string>("TuitionNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("tuitionNote");
-
                     b.HasKey("RegistrationId");
 
                     b.HasIndex("CourseId");
-
-                    b.HasIndex("StudentId");
 
                     b.ToTable("CourseRegistrations", (string)null);
                 });
@@ -414,67 +308,6 @@ namespace LeoEducation.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Instructors", (string)null);
-                });
-
-            modelBuilder.Entity("LeoEducation.Api.Models.Student", b =>
-                {
-                    b.Property<int>("StudentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("studentId");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StudentId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("createdAt")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("email");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("fullName");
-
-                    b.Property<string>("HashCode")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("hashCode");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("note");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("phone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasDefaultValue("Active")
-                        .HasColumnName("status");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updatedAt")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.HasKey("StudentId");
-
-                    b.ToTable("Students", (string)null);
                 });
 
             modelBuilder.Entity("LeoEducation.Api.Models.Subject", b =>
@@ -801,17 +634,6 @@ namespace LeoEducation.Api.Migrations
                     b.Navigation("Registration");
                 });
 
-            modelBuilder.Entity("LeoEducation.Api.Models.ConsultationLog", b =>
-                {
-                    b.HasOne("LeoEducation.Api.Models.CourseRegistration", "Registration")
-                        .WithMany("ConsultationLogs")
-                        .HasForeignKey("RegistrationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Registration");
-                });
-
             modelBuilder.Entity("LeoEducation.Api.Models.Course", b =>
                 {
                     b.HasOne("LeoEducation.Api.Models.Instructor", "Instructor")
@@ -838,14 +660,7 @@ namespace LeoEducation.Api.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_Registration_Course");
 
-                    b.HasOne("LeoEducation.Api.Models.Student", "Student")
-                        .WithMany("CourseRegistrations")
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Course");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("LeoEducation.Api.Models.TeachingClass", b =>
@@ -883,13 +698,6 @@ namespace LeoEducation.Api.Migrations
             modelBuilder.Entity("LeoEducation.Api.Models.CourseRegistration", b =>
                 {
                     b.Navigation("ClassStudents");
-
-                    b.Navigation("ConsultationLogs");
-                });
-
-            modelBuilder.Entity("LeoEducation.Api.Models.Student", b =>
-                {
-                    b.Navigation("CourseRegistrations");
                 });
 
             modelBuilder.Entity("LeoEducation.Api.Models.Subject", b =>

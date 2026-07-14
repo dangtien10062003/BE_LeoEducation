@@ -69,11 +69,19 @@ public class CreateCourseRequest
     public string CourseName { get; set; } = string.Empty;
 
     public string? Description { get; set; }
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
     public int? SubjectId { get; set; }
     public int? InstructorId { get; set; }
 
     [Range(0, 999999999.99)]
     public decimal? Price { get; set; }
+
+    [RegularExpression("Monthly|FullCourse", ErrorMessage = "Kiểu học phí phải là Monthly hoặc FullCourse")]
+    public string BillingType { get; set; } = "FullCourse";
+
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 public class UpdateCourseRequest
@@ -81,11 +89,19 @@ public class UpdateCourseRequest
     [StringLength(255)]
     public string? CourseName { get; set; }
     public string? Description { get; set; }
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
     public int? SubjectId { get; set; }
     public int? InstructorId { get; set; }
 
     [Range(0, 999999999.99)]
     public decimal? Price { get; set; }
+
+    [RegularExpression("Monthly|FullCourse", ErrorMessage = "Kiểu học phí phải là Monthly hoặc FullCourse")]
+    public string? BillingType { get; set; }
+
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 // ===== Class DTOs =====
@@ -129,6 +145,11 @@ public class ClassFilterQuery : PaginationQuery
     public string? TeachingStatus { get; set; }
 }
 
+public class StudentFilterQuery : PaginationQuery
+{
+    public int? ClassId { get; set; }
+}
+
 // ===== Registration DTOs =====
 public class CreateRegistrationRequest
 {
@@ -148,13 +169,74 @@ public class CreateRegistrationRequest
     [Required(ErrorMessage = "Vui lòng chọn khóa học")]
     [Range(1, int.MaxValue, ErrorMessage = "Khóa học không hợp lệ")]
     public int CourseId { get; set; }
+
+    [StringLength(50)]
+    public string Source { get; set; } = "Website";
+
+    [StringLength(500)]
+    public string? Note { get; set; }
 }
 
 public class UpdateRegistrationStatusRequest
 {
     [Required(ErrorMessage = "Vui lòng nhập trạng thái")]
-    [RegularExpression("Mới|Đã gọi|Đã nhập học|Pending|Approved|Cancelled", ErrorMessage = "Trạng thái không hợp lệ")]
+    [RegularExpression("Mới|Đã gọi|Đã nhập học|Đã hủy", ErrorMessage = "Trạng thái không hợp lệ")]
     public string Status { get; set; } = string.Empty;
+}
+
+public class UpdateStudentRequest
+{
+    [Required(ErrorMessage = "Vui lòng nhập họ tên")]
+    [StringLength(255)]
+    public string FullName { get; set; } = string.Empty;
+
+    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+    [StringLength(255)]
+    public string? Email { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
+    [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+    [StringLength(20)]
+    public string Phone { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Vui lòng chọn khóa học")]
+    [Range(1, int.MaxValue, ErrorMessage = "Khóa học không hợp lệ")]
+    public int CourseId { get; set; }
+
+    [StringLength(500)]
+    public string? Note { get; set; }
+}
+
+public class CreateConsultationLogRequest
+{
+    public DateTime? ContactedAt { get; set; }
+
+    [StringLength(50)]
+    public string Channel { get; set; } = "Điện thoại";
+
+    [StringLength(100)]
+    public string? StaffName { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng nhập kết quả tư vấn")]
+    [StringLength(100)]
+    public string Result { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Note { get; set; }
+}
+
+public class UpdateTuitionRequest
+{
+    [RegularExpression("Monthly|FullCourse", ErrorMessage = "Kiểu đóng học phí phải là Monthly hoặc FullCourse")]
+    public string? PaymentMode { get; set; }
+
+    [Range(0, 999999999.99)]
+    public decimal PaidAmount { get; set; }
+
+    public DateTime? LastPaymentAt { get; set; }
+
+    [StringLength(500)]
+    public string? TuitionNote { get; set; }
 }
 
 // ===== Testimonial DTOs =====

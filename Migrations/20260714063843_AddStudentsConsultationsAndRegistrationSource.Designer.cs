@@ -3,6 +3,7 @@ using System;
 using LeoEducation.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LeoEducation.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714063843_AddStudentsConsultationsAndRegistrationSource")]
+    partial class AddStudentsConsultationsAndRegistrationSource
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -204,14 +207,6 @@ namespace LeoEducation.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CourseId"));
 
-                    b.Property<string>("BillingType")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasDefaultValue("FullCourse")
-                        .HasColumnName("billingType");
-
                     b.Property<string>("CourseName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -228,19 +223,10 @@ namespace LeoEducation.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("endDate");
-
                     b.Property<string>("HashCode")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("hashCode");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("imageUrl");
 
                     b.Property<int?>("InstructorId")
                         .HasColumnType("integer")
@@ -249,10 +235,6 @@ namespace LeoEducation.Api.Migrations
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("price");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("startDate");
 
                     b.Property<int?>("SubjectId")
                         .HasColumnType("integer")
@@ -308,25 +290,10 @@ namespace LeoEducation.Api.Migrations
                         .HasColumnType("character varying(128)")
                         .HasColumnName("hashCode");
 
-                    b.Property<DateTime?>("LastPaymentAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("lastPaymentAt");
-
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("note");
-
-                    b.Property<decimal>("PaidAmount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("paidAmount");
-
-                    b.Property<string>("PaymentMode")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("paymentMode");
 
                     b.Property<string>("Phone")
                         .IsRequired()
@@ -353,11 +320,6 @@ namespace LeoEducation.Api.Migrations
                     b.Property<int?>("StudentId")
                         .HasColumnType("integer")
                         .HasColumnName("studentId");
-
-                    b.Property<string>("TuitionNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("tuitionNote");
 
                     b.HasKey("RegistrationId");
 

@@ -49,6 +49,7 @@ public class CoursesController : ControllerBase
                 c.CourseId,
                 c.CourseName,
                 c.Description,
+                c.ImageUrl,
                 c.SubjectId,
                 Subject = c.Subject == null ? null : new
                 {
@@ -71,6 +72,11 @@ public class CoursesController : ControllerBase
                     c.Instructor.IsActive
                 },
                 c.Price,
+                c.BillingType,
+                c.StartDate,
+                c.EndDate,
+                DurationMonths = TuitionCalculator.GetDurationMonths(c),
+                TotalFee = TuitionCalculator.GetTotalFee(c),
                 c.CreatedAt,
                 c.UpdatedAt
             })
@@ -102,6 +108,7 @@ public class CoursesController : ControllerBase
                 c.CourseId,
                 c.CourseName,
                 c.Description,
+                c.ImageUrl,
                 c.SubjectId,
                 Subject = c.Subject == null ? null : new
                 {
@@ -124,6 +131,11 @@ public class CoursesController : ControllerBase
                     c.Instructor.IsActive
                 },
                 c.Price,
+                c.BillingType,
+                c.StartDate,
+                c.EndDate,
+                DurationMonths = TuitionCalculator.GetDurationMonths(c),
+                TotalFee = TuitionCalculator.GetTotalFee(c),
                 c.CreatedAt,
                 c.UpdatedAt
             })
@@ -151,9 +163,13 @@ public class CoursesController : ControllerBase
         {
             CourseName = request.CourseName,
             Description = request.Description,
+            ImageUrl = request.ImageUrl,
             SubjectId = request.SubjectId,
             InstructorId = request.InstructorId,
             Price = request.Price,
+            BillingType = string.IsNullOrWhiteSpace(request.BillingType) ? TuitionCalculator.FullCourse : request.BillingType,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -179,14 +195,46 @@ public class CoursesController : ControllerBase
 
         if (request.CourseName != null) course.CourseName = request.CourseName;
         if (request.Description != null) course.Description = request.Description;
+        if (request.ImageUrl != null) course.ImageUrl = request.ImageUrl;
         if (request.SubjectId.HasValue) course.SubjectId = request.SubjectId;
         if (request.InstructorId.HasValue) course.InstructorId = request.InstructorId;
         if (request.Price.HasValue) course.Price = request.Price;
+        if (!string.IsNullOrWhiteSpace(request.BillingType)) course.BillingType = request.BillingType;
+        course.StartDate = request.StartDate;
+        course.EndDate = request.EndDate;
         course.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 
         return Ok(ApiResponse<object>.Ok(new { course.CourseId }, "Cập nhật khóa học thành công"));
+    }
+
+    [HttpPost("upload-image")]
+    public async Task<IActionResult> UploadImage(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
+
+        if (file.Length > 5 * 1024 * 1024)
+            return BadRequest(ApiResponse<object>.Fail("Ảnh không được vượt quá 5MB"));
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var allowedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        if (!allowedExtensions.Contains(extension))
+            return BadRequest(ApiResponse<object>.Fail("Chỉ hỗ trợ ảnh jpg, jpeg, png, webp hoặc gif"));
+
+        var uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "courses");
+        Directory.CreateDirectory(uploadRoot);
+
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var filePath = Path.Combine(uploadRoot, fileName);
+        await using (var stream = System.IO.File.Create(filePath))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var url = $"{Request.Scheme}://{Request.Host}/uploads/courses/{fileName}";
+        return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));
     }
 
     [HttpDelete("{id}")]

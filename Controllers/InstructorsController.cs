@@ -85,6 +85,34 @@ public class InstructorsController : ControllerBase
         return Ok(ApiResponse<Instructor>.Ok(instructor, "Thêm giáo viên thành công"));
     }
 
+    [HttpPost("upload-avatar")]
+    public async Task<IActionResult> UploadAvatar(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
+
+        if (file.Length > 5 * 1024 * 1024)
+            return BadRequest(ApiResponse<object>.Fail("Ảnh không được vượt quá 5MB"));
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var allowedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        if (!allowedExtensions.Contains(extension))
+            return BadRequest(ApiResponse<object>.Fail("Chỉ hỗ trợ ảnh jpg, jpeg, png, webp hoặc gif"));
+
+        var uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "instructors");
+        Directory.CreateDirectory(uploadRoot);
+
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var filePath = Path.Combine(uploadRoot, fileName);
+        await using (var stream = System.IO.File.Create(filePath))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var url = $"{Request.Scheme}://{Request.Host}/uploads/instructors/{fileName}";
+        return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));
+    }
+
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateInstructorRequest request)
     {

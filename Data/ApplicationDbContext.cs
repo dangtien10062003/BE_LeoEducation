@@ -34,8 +34,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<ContactRequest> ContactRequests => Set<ContactRequest>();
     public DbSet<Blog> Blogs => Set<Blog>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Student> Students => Set<Student>();
     public DbSet<TeachingClass> Classes => Set<TeachingClass>();
     public DbSet<ClassStudent> ClassStudents => Set<ClassStudent>();
+    public DbSet<ConsultationLog> ConsultationLogs => Set<ConsultationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,9 +75,13 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.HashCode).HasColumnName("hashCode").HasMaxLength(128);
             entity.Property(e => e.CourseName).HasColumnName("courseName").IsRequired().HasMaxLength(255);
             entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.ImageUrl).HasColumnName("imageUrl").HasMaxLength(500);
             entity.Property(e => e.SubjectId).HasColumnName("subjectId");
             entity.Property(e => e.InstructorId).HasColumnName("instructorId");
             entity.Property(e => e.Price).HasColumnName("price").HasColumnType("decimal(18,2)");
+            entity.Property(e => e.BillingType).HasColumnName("billingType").HasMaxLength(50).HasDefaultValue("FullCourse");
+            entity.Property(e => e.StartDate).HasColumnName("startDate");
+            entity.Property(e => e.EndDate).HasColumnName("endDate");
             entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
             entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql(CurrentTimestampSql);
             entity.HasOne(e => e.Subject)
@@ -89,6 +95,21 @@ public class ApplicationDbContext : DbContext
         });
 
         // ===== Classes =====
+        modelBuilder.Entity<Student>(entity =>
+        {
+            entity.ToTable("Students");
+            entity.HasKey(e => e.StudentId);
+            entity.Property(e => e.StudentId).HasColumnName("studentId");
+            entity.Property(e => e.HashCode).HasColumnName("hashCode").HasMaxLength(128);
+            entity.Property(e => e.FullName).HasColumnName("fullName").IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(255);
+            entity.Property(e => e.Phone).HasColumnName("phone").IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Note).HasColumnName("note").HasMaxLength(500);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Active");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
+            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt").HasDefaultValueSql(CurrentTimestampSql);
+        });
+
         modelBuilder.Entity<TeachingClass>(entity =>
         {
             entity.ToTable("TeachingClasses");
@@ -149,12 +170,41 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(255);
             entity.Property(e => e.Phone).HasColumnName("phone").IsRequired().HasMaxLength(20);
             entity.Property(e => e.CourseId).HasColumnName("courseId");
+            entity.Property(e => e.StudentId).HasColumnName("studentId");
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Mới");
+            entity.Property(e => e.Source).HasColumnName("source").HasMaxLength(50).HasDefaultValue("Website");
+            entity.Property(e => e.Note).HasColumnName("note").HasMaxLength(500);
+            entity.Property(e => e.PaymentMode).HasColumnName("paymentMode").HasMaxLength(50);
+            entity.Property(e => e.PaidAmount).HasColumnName("paidAmount").HasColumnType("decimal(18,2)").HasDefaultValue(0m);
+            entity.Property(e => e.LastPaymentAt).HasColumnName("lastPaymentAt");
+            entity.Property(e => e.TuitionNote).HasColumnName("tuitionNote").HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
             entity.HasOne(e => e.Course)
                   .WithMany(c => c.Registrations)
                   .HasForeignKey(e => e.CourseId)
                   .HasConstraintName("FK_Registration_Course");
+            entity.HasOne(e => e.Student)
+                  .WithMany(s => s.CourseRegistrations)
+                  .HasForeignKey(e => e.StudentId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ConsultationLog>(entity =>
+        {
+            entity.ToTable("ConsultationLogs");
+            entity.HasKey(e => e.ConsultationLogId);
+            entity.Property(e => e.ConsultationLogId).HasColumnName("consultationLogId");
+            entity.Property(e => e.RegistrationId).HasColumnName("registrationId");
+            entity.Property(e => e.ContactedAt).HasColumnName("contactedAt").HasDefaultValueSql(CurrentTimestampSql);
+            entity.Property(e => e.Channel).HasColumnName("channel").HasMaxLength(50);
+            entity.Property(e => e.StaffName).HasColumnName("staffName").HasMaxLength(100);
+            entity.Property(e => e.Result).HasColumnName("result").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Note).HasColumnName("note").HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql(CurrentTimestampSql);
+            entity.HasOne(e => e.Registration)
+                  .WithMany(r => r.ConsultationLogs)
+                  .HasForeignKey(e => e.RegistrationId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ===== Testimonials =====

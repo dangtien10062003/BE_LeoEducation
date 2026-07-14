@@ -134,6 +134,7 @@ public class ClassesController : ControllerBase
                         s.Registration.Email,
                         s.Registration.Phone,
                         s.Registration.Status,
+                        s.Registration.Note,
                         s.Registration.CreatedAt
                     })
                     .ToList()
@@ -160,6 +161,7 @@ public class ClassesController : ControllerBase
                 r.FullName,
                 r.Email,
                 r.Phone,
+                r.Note,
                 r.Status,
                 r.CreatedAt,
                 Classes = r.ClassStudents
@@ -182,8 +184,10 @@ public class ClassesController : ControllerBase
                 r.FullName,
                 r.Email,
                 r.Phone,
+                r.Note,
                 RegistrationStatus = r.Status,
                 EnrollmentStatus = enrolled ? "Đã ghi danh" : "Chờ ghi danh",
+                StudentStatus = (inCurrentClass || otherClass != null) ? "Đã có lớp" : "Chưa có lớp",
                 ClassAssignmentStatus = inCurrentClass
                     ? "Đã trong lớp này"
                     : otherClass != null
@@ -336,10 +340,7 @@ public class ClassesController : ControllerBase
         if (string.IsNullOrWhiteSpace(status)) return false;
 
         var value = status.Trim();
-        return value.Equals("Đã nhập học", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("Approved", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("Enrolled", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("ÄÃ£ nháº­p há»c", StringComparison.OrdinalIgnoreCase);
+        return value.Equals("Đã nhập học", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetTeachingStatus(DateTime startDate, DateTime endDate, DateTime today)
