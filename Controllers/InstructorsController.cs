@@ -90,7 +90,7 @@ public class InstructorsController : ControllerBase
     }
 
     [HttpPost("upload-avatar")]
-    public async Task<IActionResult> UploadAvatar(IFormFile file)
+    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
