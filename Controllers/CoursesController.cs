@@ -162,6 +162,8 @@ public class CoursesController : ControllerBase
 
         if (request.SubjectId.HasValue && !await _db.Subjects.AnyAsync(s => s.SubjectId == request.SubjectId.Value))
             return BadRequest(ApiResponse<object>.Fail("Môn học không tồn tại"));
+        if (request.InstructorId.HasValue && !await _db.Instructors.AnyAsync(i => i.Id == request.InstructorId.Value))
+            return BadRequest(ApiResponse<object>.Fail("Giáo viên không tồn tại"));
 
         var course = new Course
         {
@@ -196,6 +198,8 @@ public class CoursesController : ControllerBase
 
         if (request.SubjectId.HasValue && !await _db.Subjects.AnyAsync(s => s.SubjectId == request.SubjectId.Value))
             return BadRequest(ApiResponse<object>.Fail("Môn học không tồn tại"));
+        if (request.InstructorId.HasValue && !await _db.Instructors.AnyAsync(i => i.Id == request.InstructorId.Value))
+            return BadRequest(ApiResponse<object>.Fail("Giáo viên không tồn tại"));
 
         if (request.CourseName != null) course.CourseName = request.CourseName;
         if (request.Description != null) course.Description = request.Description;

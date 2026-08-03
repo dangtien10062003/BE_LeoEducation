@@ -2,6 +2,7 @@ using LeoEducation.Api.Data;
 using LeoEducation.Api.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
@@ -12,6 +13,17 @@ Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot
 Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "courses"));
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // ===== CORS =====
 var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?
@@ -128,6 +140,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 // ===== Global Error Handling Middleware =====
 app.UseMiddleware<GlobalExceptionMiddleware>();
