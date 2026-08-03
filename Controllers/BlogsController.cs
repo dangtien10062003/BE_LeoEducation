@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
@@ -9,6 +10,7 @@ namespace LeoEducation.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class BlogsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
@@ -19,6 +21,7 @@ public class BlogsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] PaginationQuery request)
     {
         var query = _db.Blogs.AsQueryable();
@@ -44,6 +47,7 @@ public class BlogsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
         var blog = await _db.Blogs.FindAsync(id);

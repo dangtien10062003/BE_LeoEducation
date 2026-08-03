@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
@@ -9,6 +10,7 @@ namespace LeoEducation.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class RegistrationsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
@@ -22,6 +24,7 @@ public class RegistrationsController : ControllerBase
     /// POST /api/registrations - Đăng ký khóa học
     /// </summary>
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateRegistrationRequest request)
     {
         if (!ModelState.IsValid)

@@ -3,6 +3,7 @@ using LeoEducation.Api.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 LoadDotEnv(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
@@ -46,27 +47,71 @@ else
         options.UseNpgsql(connectionString));
 }
 
-// ===== JWT Authentication =====
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? string.Empty;
-if (string.IsNullOrWhiteSpace(jwtKey))
-    throw new InvalidOperationException("Missing Jwt:Key configuration.");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "LeoEducation";
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+// ===== Authentication =====
+var clerkAuthority = builder.Configuration["Clerk:Authority"]?.TrimEnd('/');
+var clerkAuthorizedParties = builder.Configuration["Clerk:AuthorizedParties"]?
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? [];
+
+if (!string.IsNullOrWhiteSpace(clerkAuthority))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtIssuer,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ClockSkew = TimeSpan.Zero
-        };
-    });
+            options.Authority = clerkAuthority;
+            options.MetadataAddress = $"{clerkAuthority}/.well-known/openid-configuration";
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = clerkAuthority,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                NameClaimType = ClaimTypes.NameIdentifier,
+                ClockSkew = TimeSpan.Zero
+            };
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = context =>
+                {
+                    if (clerkAuthorizedParties.Length == 0)
+                        return Task.CompletedTask;
+
+                    var azp = context.Principal?.FindFirst("azp")?.Value;
+                    if (string.IsNullOrWhiteSpace(azp)
+                        || !clerkAuthorizedParties.Contains(azp, StringComparer.OrdinalIgnoreCase))
+                    {
+                        context.Fail("Invalid Clerk authorized party.");
+                    }
+
+                    return Task.CompletedTask;
+                }
+            };
+        });
+}
+else
+{
+    var jwtKey = builder.Configuration["Jwt:Key"] ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(jwtKey))
+        throw new InvalidOperationException("Missing Jwt:Key configuration.");
+
+    var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "LeoEducation";
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtIssuer,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+}
 builder.Services.AddAuthorization();
 
 // ===== Controllers + JSON =====

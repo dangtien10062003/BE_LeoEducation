@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -41,10 +41,10 @@ public class AuthController : ControllerBase
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Username);
 
         if (user == null || !string.Equals(user.Status, "Active", StringComparison.OrdinalIgnoreCase))
-            return Unauthorized(ApiResponse<object>.Fail("Sai email hoặc mật khẩu"));
+            return Unauthorized(ApiResponse<object>.Fail("Sai email hoáº·c máº­t kháº©u"));
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            return Unauthorized(ApiResponse<object>.Fail("Sai email hoặc mật khẩu"));
+            return Unauthorized(ApiResponse<object>.Fail("Sai email hoáº·c máº­t kháº©u"));
 
         user.LastLoginAt = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
@@ -60,7 +60,7 @@ public class AuthController : ControllerBase
             FullName = user.FullName,
             Role = "Admin",
             Token = token
-        }, "Đăng nhập thành công"));
+        }, "ÄÄƒng nháº­p thÃ nh cÃ´ng"));
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ public class AuthController : ControllerBase
         }
 
         if (await _db.Users.AnyAsync(u => u.Email == request.Email))
-            return BadRequest(ApiResponse<object>.Fail("Email đã tồn tại"));
+            return BadRequest(ApiResponse<object>.Fail("Email Ä‘Ã£ tá»“n táº¡i"));
 
         var user = new User
         {
@@ -101,7 +101,7 @@ public class AuthController : ControllerBase
             FullName = user.FullName,
             Role = "Admin",
             Token = token
-        }, "Đăng ký thành công"));
+        }, "ÄÄƒng kÃ½ thÃ nh cÃ´ng"));
     }
 
     /// <summary>
@@ -111,6 +111,9 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
+        if (IsClerkUser())
+            return BadRequest(ApiResponse<object>.Fail("TÃ i khoáº£n Ä‘ang quáº£n lÃ½ báº±ng Clerk. Vui lÃ²ng Ä‘á»•i máº­t kháº©u trong Clerk user profile."));
+
         if (!ModelState.IsValid)
         {
             var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
@@ -119,20 +122,20 @@ public class AuthController : ControllerBase
 
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            return Unauthorized(ApiResponse<object>.Fail("Token không hợp lệ"));
+            return Unauthorized(ApiResponse<object>.Fail("Token khÃ´ng há»£p lá»‡"));
 
         var user = await _db.Users.FindAsync(userId);
         if (user == null)
-            return NotFound(ApiResponse<object>.Fail("Không tìm thấy user"));
+            return NotFound(ApiResponse<object>.Fail("KhÃ´ng tÃ¬m tháº¥y user"));
 
         if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
-            return BadRequest(ApiResponse<object>.Fail("Mật khẩu cũ không đúng"));
+            return BadRequest(ApiResponse<object>.Fail("Máº­t kháº©u cÅ© khÃ´ng Ä‘Ãºng"));
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(ApiResponse<object>.Ok(new { user.Id }, "Đổi mật khẩu thành công"));
+        return Ok(ApiResponse<object>.Ok(new { user.Id }, "Äá»•i máº­t kháº©u thÃ nh cÃ´ng"));
     }
 
     /// <summary>
@@ -144,7 +147,25 @@ public class AuthController : ControllerBase
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            return Unauthorized(ApiResponse<object>.Fail("Token không hợp lệ"));
+        {
+            var clerkUserId = User.FindFirst("sub")?.Value ?? userIdClaim;
+            if (string.IsNullOrWhiteSpace(clerkUserId))
+                return Unauthorized(ApiResponse<object>.Fail("Token không hợp lệ"));
+
+            return Ok(ApiResponse<object>.Ok(new
+            {
+                Id = clerkUserId,
+                FullName = User.FindFirst("name")?.Value
+                    ?? User.FindFirst("given_name")?.Value
+                    ?? User.FindFirst("preferred_username")?.Value
+                    ?? User.FindFirst(ClaimTypes.Name)?.Value
+                    ?? "Admin",
+                Email = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value,
+                AvatarURL = User.FindFirst("picture")?.Value,
+                Status = "Active",
+                Provider = "Clerk"
+            }));
+        }
 
         var user = await _db.Users.FindAsync(userId);
         if (user == null)
@@ -163,6 +184,13 @@ public class AuthController : ControllerBase
         }));
     }
 
+    private bool IsClerkUser()
+    {
+        var issuer = User.FindFirst("iss")?.Value;
+        var subject = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return issuer?.Contains("clerk.accounts", StringComparison.OrdinalIgnoreCase) == true
+            || subject?.StartsWith("user_", StringComparison.OrdinalIgnoreCase) == true;
+    }
     /// <summary>
     /// POST /api/auth/test-login - Dev-only password verification helper.
     /// </summary>
@@ -222,3 +250,4 @@ public class AuthController : ControllerBase
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
+

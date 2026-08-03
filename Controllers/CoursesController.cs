@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
@@ -9,6 +10,7 @@ namespace LeoEducation.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class CoursesController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
@@ -19,6 +21,7 @@ public class CoursesController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] CourseFilterQuery query)
     {
         var q = _db.Courses
@@ -97,6 +100,7 @@ public class CoursesController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
         var course = await _db.Courses

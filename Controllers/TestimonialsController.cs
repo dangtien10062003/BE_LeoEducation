@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
@@ -9,6 +10,7 @@ namespace LeoEducation.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TestimonialsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
@@ -19,6 +21,7 @@ public class TestimonialsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] ActiveFilterQuery request)
     {
         var query = _db.Testimonials.AsQueryable();
@@ -46,6 +49,7 @@ public class TestimonialsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
         var testimonial = await _db.Testimonials.FindAsync(id);
