@@ -9,6 +9,7 @@ using System.Text;
 
 LoadDotEnv(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
 ConfigureRenderPort();
+DisableConfigFileWatchers();
 Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "instructors"));
 Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "courses"));
 
@@ -159,7 +160,8 @@ if (swaggerEnabled)
 }
 
 // ===== Auto-migrate on startup =====
-var autoMigrate = builder.Configuration.GetValue("Database:AutoMigrate", false);
+var autoMigrate = app.Environment.IsProduction()
+    || builder.Configuration.GetValue("Database:AutoMigrate", false);
 if (useInMemoryDatabase)
 {
     await SeedLocalDevelopmentDataAsync(app.Services);
@@ -211,6 +213,11 @@ static void ConfigureRenderPort()
 
     var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
     Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://0.0.0.0:{port}");
+}
+
+static void DisableConfigFileWatchers()
+{
+    Environment.SetEnvironmentVariable("DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE", "false");
 }
 
 static bool IsAllowedCorsOrigin(string origin, string[] configuredOrigins)
