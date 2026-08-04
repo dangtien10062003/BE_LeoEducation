@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
 
@@ -106,7 +107,7 @@ if (!string.IsNullOrWhiteSpace(clerkAuthority))
             };
         });
 }
-else
+else if (builder.Environment.IsDevelopment())
 {
     var jwtKey = builder.Configuration["Jwt:Key"] ?? string.Empty;
     if (string.IsNullOrWhiteSpace(jwtKey))
@@ -129,6 +130,10 @@ else
             };
         });
 }
+else
+{
+    throw new InvalidOperationException("Missing Clerk:Authority configuration. Production authentication must use Clerk.");
+}
 builder.Services.AddAuthorization();
 
 // ===== Controllers + JSON =====
@@ -142,7 +147,33 @@ builder.Services.AddControllers()
 
 // ===== Swagger =====
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter a valid JWT bearer token."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            []
+        }
+    });
+});
 
 var app = builder.Build();
 
