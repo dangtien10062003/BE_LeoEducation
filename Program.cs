@@ -234,7 +234,8 @@ static bool IsAllowedCorsOrigin(string origin, string[] configuredOrigins)
 
     return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
         || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
-        || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+        || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.EndsWith(".onrender.com", StringComparison.OrdinalIgnoreCase);
 }
 
 static bool IsAllowedAuthorizedParty(string authorizedParty, string[] configuredParties)
@@ -247,7 +248,8 @@ static bool IsAllowedAuthorizedParty(string authorizedParty, string[] configured
 
     return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
         || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
-        || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+        || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.EndsWith(".onrender.com", StringComparison.OrdinalIgnoreCase);
 }
 
 static async Task SeedLocalDevelopmentDataAsync(IServiceProvider services)
