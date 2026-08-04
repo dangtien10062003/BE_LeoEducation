@@ -12,6 +12,10 @@ RUN dotnet publish ./LeoEducation.Api.csproj -c Release -o /app/publish /p:UseAp
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 EXPOSE 10000
