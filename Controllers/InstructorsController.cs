@@ -93,8 +93,11 @@ public class InstructorsController : ControllerBase
     }
 
     [HttpPost("upload-avatar")]
-    public async Task<IActionResult> UploadAvatar([FromForm] IFormFile file)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAvatar([FromForm] UploadInstructorAvatarRequest request)
     {
+        var file = request.File;
+
         if (file == null || file.Length == 0)
             return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
 
@@ -146,4 +149,9 @@ public class InstructorsController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(new { instructor.Id }, "Đã ẩn giáo viên"));
     }
+}
+
+public class UploadInstructorAvatarRequest
+{
+    public IFormFile File { get; set; } = default!;
 }
