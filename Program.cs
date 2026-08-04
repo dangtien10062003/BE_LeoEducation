@@ -1,5 +1,6 @@
 using LeoEducation.Api.Data;
 using LeoEducation.Api.Middlewares;
+using LeoEducation.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -25,6 +26,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
+
+builder.Services.Configure<ImageStorageOptions>(builder.Configuration.GetSection("R2"));
+builder.Services.AddSingleton<IImageStorageService, ImageStorageService>();
 
 // ===== CORS =====
 var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?
@@ -92,7 +96,7 @@ if (!string.IsNullOrWhiteSpace(clerkAuthority))
 
                     var azp = context.Principal?.FindFirst("azp")?.Value;
                     if (string.IsNullOrWhiteSpace(azp)
-                        || !clerkAuthorizedParties.Contains(azp, StringComparer.OrdinalIgnoreCase))
+                        || !IsAllowedAuthorizedParty(azp, clerkAuthorizedParties))
                     {
                         context.Fail("Invalid Clerk authorized party.");
                     }
@@ -226,6 +230,19 @@ static bool IsAllowedCorsOrigin(string origin, string[] configuredOrigins)
         return true;
 
     if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+        return false;
+
+    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+}
+
+static bool IsAllowedAuthorizedParty(string authorizedParty, string[] configuredParties)
+{
+    if (configuredParties.Contains(authorizedParty, StringComparer.OrdinalIgnoreCase))
+        return true;
+
+    if (!Uri.TryCreate(authorizedParty, UriKind.Absolute, out var uri))
         return false;
 
     return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)

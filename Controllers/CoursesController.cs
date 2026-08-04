@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Services;
 using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
@@ -14,10 +15,12 @@ namespace LeoEducation.Api.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IImageStorageService _imageStorage;
 
-    public CoursesController(ApplicationDbContext db)
+    public CoursesController(ApplicationDbContext db, IImageStorageService imageStorage)
     {
         _db = db;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet]
@@ -231,17 +234,7 @@ public class CoursesController : ControllerBase
         if (!allowedExtensions.Contains(extension))
             return BadRequest(ApiResponse<object>.Fail("Chỉ hỗ trợ ảnh jpg, jpeg, png, webp hoặc gif"));
 
-        var uploadRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "courses");
-        Directory.CreateDirectory(uploadRoot);
-
-        var fileName = $"{Guid.NewGuid():N}{extension}";
-        var filePath = Path.Combine(uploadRoot, fileName);
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        var url = $"{Request.Scheme}://{Request.Host}/uploads/courses/{fileName}";
+        var url = await _imageStorage.SaveAsync(file, "courses", Request, HttpContext.RequestAborted);
         return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));
     }
 
