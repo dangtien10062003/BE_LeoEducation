@@ -66,6 +66,8 @@ public sealed class ImageStorageService : IImageStorageService
             Key = key,
             InputStream = stream,
             ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+            DisablePayloadSigning = true,
+            DisableDefaultChecksumValidation = true,
         }, cancellationToken);
 
         return $"{_options.PublicBaseUrl.TrimEnd('/')}/{key}";
