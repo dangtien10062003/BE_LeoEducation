@@ -20,6 +20,14 @@ public interface IImageStorageService
     Task<string> SaveAsync(IFormFile file, string folder, HttpRequest request, CancellationToken cancellationToken);
 }
 
+public sealed class ImageStorageException : Exception
+{
+    public ImageStorageException(string message, Exception? innerException = null)
+        : base(message, innerException)
+    {
+    }
+}
+
 public sealed class ImageStorageService : IImageStorageService
 {
     private readonly ImageStorageOptions _options;
@@ -41,7 +49,7 @@ public sealed class ImageStorageService : IImageStorageService
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         var fileName = $"{Guid.NewGuid():N}{extension}";
 
-        if (IsR2Configured())
+        if (HasAnyR2Configuration())
             return await SaveToR2Async(file, folder, fileName, cancellationToken);
 
         return await SaveToLocalDiskAsync(file, folder, fileName, request, cancellationToken);
@@ -55,15 +63,13 @@ public sealed class ImageStorageService : IImageStorageService
         var secretAccessKey = _options.SecretAccessKey?.Trim();
         var publicBaseUrl = _options.PublicBaseUrl?.Trim();
 
-        if (string.IsNullOrWhiteSpace(publicBaseUrl))
-            throw new InvalidOperationException("Missing R2:PublicBaseUrl. Use an R2 public bucket URL or custom domain.");
-
         if (string.IsNullOrWhiteSpace(accountId)
             || string.IsNullOrWhiteSpace(bucket)
             || string.IsNullOrWhiteSpace(accessKeyId)
-            || string.IsNullOrWhiteSpace(secretAccessKey))
+            || string.IsNullOrWhiteSpace(secretAccessKey)
+            || string.IsNullOrWhiteSpace(publicBaseUrl))
         {
-            throw new InvalidOperationException("Missing R2 configuration. Check R2:AccountId, R2:Bucket, R2:AccessKeyId, and R2:SecretAccessKey.");
+            throw new InvalidOperationException("Missing R2 configuration. Check R2:AccountId, R2:Bucket, R2:AccessKeyId, R2:SecretAccessKey, and R2:PublicBaseUrl.");
         }
 
         var key = $"{folder.Trim('/')}/{fileName}";
@@ -86,16 +92,44 @@ public sealed class ImageStorageService : IImageStorageService
             new BasicAWSCredentials(accessKeyId, secretAccessKey),
             config);
 
-        await using var stream = file.OpenReadStream();
-        await client.PutObjectAsync(new PutObjectRequest
+        try
         {
-            BucketName = bucket,
-            Key = key,
-            InputStream = stream,
-            ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-            DisablePayloadSigning = true,
-            DisableDefaultChecksumValidation = true,
-        }, cancellationToken);
+            await using var stream = file.OpenReadStream();
+            await client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName = bucket,
+                Key = key,
+                InputStream = stream,
+                ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                DisablePayloadSigning = true,
+                DisableDefaultChecksumValidation = true,
+            }, cancellationToken);
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Cloudflare R2 upload failed. StatusCode={StatusCode}, ErrorCode={ErrorCode}, RequestId={RequestId}, Bucket={Bucket}, Key={Key}",
+                ex.StatusCode,
+                ex.ErrorCode,
+                ex.RequestId,
+                bucket,
+                key);
+
+            throw new ImageStorageException(
+                $"Không upload được ảnh lên Cloudflare R2 ({ex.StatusCode}, {ex.ErrorCode}). Kiểm tra bucket, AccountId, Access Key quyền Object Write và PublicBaseUrl.",
+                ex);
+        }
+        catch (AmazonServiceException ex)
+        {
+            _logger.LogError(ex, "Cloudflare R2 service error while uploading image. Bucket={Bucket}, Key={Key}", bucket, key);
+            throw new ImageStorageException("Không upload được ảnh lên Cloudflare R2. Kiểm tra cấu hình R2 trên Render.", ex);
+        }
+        catch (AmazonClientException ex)
+        {
+            _logger.LogError(ex, "Cloudflare R2 client error while uploading image. Bucket={Bucket}, Key={Key}", bucket, key);
+            throw new ImageStorageException("Không kết nối được Cloudflare R2. Kiểm tra AccountId và network từ Render.", ex);
+        }
 
         return $"{publicBaseUrl.TrimEnd('/')}/{key}";
     }
@@ -114,12 +148,13 @@ public sealed class ImageStorageService : IImageStorageService
         return $"{request.Scheme}://{request.Host}/uploads/{folder}/{fileName}";
     }
 
-    private bool IsR2Configured()
+    private bool HasAnyR2Configuration()
     {
         return !string.IsNullOrWhiteSpace(_options.AccountId)
-            && !string.IsNullOrWhiteSpace(_options.Bucket)
-            && !string.IsNullOrWhiteSpace(_options.AccessKeyId)
-            && !string.IsNullOrWhiteSpace(_options.SecretAccessKey);
+            || !string.IsNullOrWhiteSpace(_options.Bucket)
+            || !string.IsNullOrWhiteSpace(_options.AccessKeyId)
+            || !string.IsNullOrWhiteSpace(_options.SecretAccessKey)
+            || !string.IsNullOrWhiteSpace(_options.PublicBaseUrl);
     }
 
     private static string Mask(string value)

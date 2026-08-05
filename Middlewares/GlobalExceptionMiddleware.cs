@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using LeoEducation.Api.Services;
 
 namespace LeoEducation.Api.Middlewares;
 
@@ -36,6 +37,7 @@ public class GlobalExceptionMiddleware
             KeyNotFoundException => (HttpStatusCode.NotFound, exception.Message),
             ArgumentException => (HttpStatusCode.BadRequest, exception.Message),
             InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
+            ImageStorageException => (HttpStatusCode.BadGateway, exception.Message),
             _ => (HttpStatusCode.InternalServerError, "Có lỗi xảy ra trên server. Vui lòng thử lại sau.")
         };
 
