@@ -222,10 +222,8 @@ public class CoursesController : ControllerBase
 
     [HttpPost("upload-image")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadImage([FromForm] UploadCourseImageRequest request)
+    public async Task<IActionResult> UploadImage([FromForm(Name = "file")] IFormFile file)
     {
-        var file = request.File;
-
         if (file == null || file.Length == 0)
             return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
 
@@ -253,9 +251,4 @@ public class CoursesController : ControllerBase
 
         return Ok(ApiResponse<object>.Ok(new { course.CourseId }, "Đã xóa khóa học"));
     }
-}
-
-public class UploadCourseImageRequest
-{
-    public IFormFile File { get; set; } = default!;
 }
