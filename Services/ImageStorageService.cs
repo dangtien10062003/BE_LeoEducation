@@ -18,6 +18,7 @@ public sealed class ImageStorageOptions
 public interface IImageStorageService
 {
     Task<string> SaveAsync(IFormFile file, string folder, HttpRequest request, CancellationToken cancellationToken);
+    Task<object> CheckHealthAsync(CancellationToken cancellationToken);
 }
 
 public sealed class ImageStorageException : Exception
@@ -55,6 +56,92 @@ public sealed class ImageStorageService : IImageStorageService
         return await SaveToLocalDiskAsync(file, folder, fileName, request, cancellationToken);
     }
 
+    public async Task<object> CheckHealthAsync(CancellationToken cancellationToken)
+    {
+        var accountId = _options.AccountId?.Trim();
+        var bucket = _options.Bucket?.Trim();
+        var accessKeyId = _options.AccessKeyId?.Trim();
+        var secretAccessKey = _options.SecretAccessKey?.Trim();
+        var publicBaseUrl = _options.PublicBaseUrl?.Trim();
+        var hasAnyR2Configuration = HasAnyR2Configuration();
+        var hasRequiredR2Configuration =
+            !string.IsNullOrWhiteSpace(accountId)
+            && !string.IsNullOrWhiteSpace(bucket)
+            && !string.IsNullOrWhiteSpace(accessKeyId)
+            && !string.IsNullOrWhiteSpace(secretAccessKey)
+            && !string.IsNullOrWhiteSpace(publicBaseUrl);
+
+        if (!hasAnyR2Configuration)
+        {
+            return new
+            {
+                mode = "local",
+                configured = false,
+                message = "R2 is not configured; uploads use local disk."
+            };
+        }
+
+        if (!hasRequiredR2Configuration)
+        {
+            return new
+            {
+                mode = "r2",
+                configured = false,
+                accountId = !string.IsNullOrWhiteSpace(accountId),
+                bucket = !string.IsNullOrWhiteSpace(bucket),
+                accessKeyId = !string.IsNullOrWhiteSpace(accessKeyId),
+                secretAccessKey = !string.IsNullOrWhiteSpace(secretAccessKey),
+                publicBaseUrl = !string.IsNullOrWhiteSpace(publicBaseUrl),
+                message = "R2 configuration is incomplete."
+            };
+        }
+
+        var endpoint = $"https://{accountId}.r2.cloudflarestorage.com";
+        var config = CreateR2Config(endpoint);
+        using var client = new AmazonS3Client(
+            new BasicAWSCredentials(accessKeyId, secretAccessKey),
+            config);
+
+        try
+        {
+            var response = await client.ListObjectsV2Async(new ListObjectsV2Request
+            {
+                BucketName = bucket,
+                MaxKeys = 1,
+            }, cancellationToken);
+
+            return new
+            {
+                mode = "r2",
+                configured = true,
+                reachable = true,
+                endpoint,
+                bucket,
+                accessKeyId = Mask(accessKeyId!),
+                publicBaseUrl,
+                objectCountProbe = response.S3Objects.Count,
+            };
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogError(ex, "Cloudflare R2 health check failed. StatusCode={StatusCode}, ErrorCode={ErrorCode}, RequestId={RequestId}, Bucket={Bucket}", ex.StatusCode, ex.ErrorCode, ex.RequestId, bucket);
+            return new
+            {
+                mode = "r2",
+                configured = true,
+                reachable = false,
+                endpoint,
+                bucket,
+                accessKeyId = Mask(accessKeyId!),
+                publicBaseUrl,
+                statusCode = ex.StatusCode.ToString(),
+                errorCode = ex.ErrorCode,
+                requestId = ex.RequestId,
+                message = ex.Message,
+            };
+        }
+    }
+
     private async Task<string> SaveToR2Async(IFormFile file, string folder, string fileName, CancellationToken cancellationToken)
     {
         var accountId = _options.AccountId?.Trim();
@@ -82,12 +169,7 @@ public sealed class ImageStorageService : IImageStorageService
             Mask(accessKeyId),
             publicBaseUrl);
 
-        var config = new AmazonS3Config
-        {
-            ServiceURL = endpoint,
-            ForcePathStyle = true,
-            RegionEndpoint = RegionEndpoint.USEast1,
-        };
+        var config = CreateR2Config(endpoint);
         using var client = new AmazonS3Client(
             new BasicAWSCredentials(accessKeyId, secretAccessKey),
             config);
@@ -155,6 +237,18 @@ public sealed class ImageStorageService : IImageStorageService
             || !string.IsNullOrWhiteSpace(_options.AccessKeyId)
             || !string.IsNullOrWhiteSpace(_options.SecretAccessKey)
             || !string.IsNullOrWhiteSpace(_options.PublicBaseUrl);
+    }
+
+    private static AmazonS3Config CreateR2Config(string endpoint)
+    {
+        return new AmazonS3Config
+        {
+            ServiceURL = endpoint,
+            ForcePathStyle = true,
+            AuthenticationRegion = "auto",
+            AuthenticationServiceName = "s3",
+            RegionEndpoint = RegionEndpoint.USEast1,
+        };
     }
 
     private static string Mask(string value)

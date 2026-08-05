@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
+using LeoEducation.Api.Services;
 
 namespace LeoEducation.Api.Controllers;
 
@@ -9,10 +10,12 @@ namespace LeoEducation.Api.Controllers;
 public class HealthCheckController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IImageStorageService _imageStorage;
 
-    public HealthCheckController(ApplicationDbContext db)
+    public HealthCheckController(ApplicationDbContext db, IImageStorageService imageStorage)
     {
         _db = db;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet]
@@ -39,5 +42,17 @@ public class HealthCheckController : ControllerBase
         {
             return Ok(new { success = true, message = "Server is running", data = new { status = "OK", database = "Disconnected", error = ex.Message } });
         }
+    }
+
+    [HttpGet("r2")]
+    public async Task<IActionResult> GetR2(CancellationToken cancellationToken)
+    {
+        var data = await _imageStorage.CheckHealthAsync(cancellationToken);
+        return Ok(new
+        {
+            success = true,
+            message = "R2 health check",
+            data
+        });
     }
 }
