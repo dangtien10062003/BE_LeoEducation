@@ -101,21 +101,6 @@ public class InstructorsController : ControllerBase
         return Ok(ApiResponse<Instructor>.Ok(instructor, "Thêm giáo viên thành công"));
     }
 
-    [HttpPost("upload-avatar")]
-    [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadAvatar([FromForm(Name = "file")] IFormFile file)
-    {
-        if (file == null || file.Length == 0)
-            return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
-
-        var imageValidationError = ImageUploadValidator.GetValidationError(file);
-        if (imageValidationError != null)
-            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
-
-        var url = await _imageStorage.SaveAsync(file, "instructors", Request, HttpContext.RequestAborted);
-        return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));
-    }
-
     [HttpPut("{id}")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Update(int id, [FromForm] CreateInstructorRequest request)

@@ -237,21 +237,6 @@ public class CoursesController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { course.CourseId }, "Cập nhật khóa học thành công"));
     }
 
-    [HttpPost("upload-image")]
-    [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadImage([FromForm(Name = "file")] IFormFile file)
-    {
-        if (file == null || file.Length == 0)
-            return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
-
-        var imageValidationError = ImageUploadValidator.GetValidationError(file);
-        if (imageValidationError != null)
-            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
-
-        var url = await _imageStorage.SaveAsync(file, "courses", Request, HttpContext.RequestAborted);
-        return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));
-    }
-
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
