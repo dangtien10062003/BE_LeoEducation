@@ -245,7 +245,7 @@ public sealed class ImageStorageService : IImageStorageService
         {
             ServiceURL = endpoint,
             ForcePathStyle = true,
-            AuthenticationRegion = "auto",
+            AuthenticationRegion = "us-east-1",
             AuthenticationServiceName = "s3",
             RegionEndpoint = RegionEndpoint.USEast1,
         };
