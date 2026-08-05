@@ -64,7 +64,8 @@ public class InstructorsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateInstructorRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] CreateInstructorRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -72,12 +73,20 @@ public class InstructorsController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(string.Join("; ", errors)));
         }
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
+        var avatarUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "instructors", Request, HttpContext.RequestAborted)
+            : request.AvatarUrl;
+
         var instructor = new Instructor
         {
             FullName = request.FullName,
             Role = request.Role,
             Bio = request.Bio,
-            AvatarUrl = request.AvatarUrl,
+            AvatarUrl = avatarUrl,
             Rating = request.Rating,
             Experience = request.Experience,
             IsActive = true
@@ -99,20 +108,17 @@ public class InstructorsController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
 
-        if (file.Length > 5 * 1024 * 1024)
-            return BadRequest(ApiResponse<object>.Fail("Ảnh không được vượt quá 5MB"));
-
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var allowedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-        if (!allowedExtensions.Contains(extension))
-            return BadRequest(ApiResponse<object>.Fail("Chỉ hỗ trợ ảnh jpg, jpeg, png, webp hoặc gif"));
+        var imageValidationError = ImageUploadValidator.GetValidationError(file);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
 
         var url = await _imageStorage.SaveAsync(file, "instructors", Request, HttpContext.RequestAborted);
         return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] CreateInstructorRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Update(int id, [FromForm] CreateInstructorRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -124,10 +130,16 @@ public class InstructorsController : ControllerBase
         if (instructor == null)
             return NotFound(ApiResponse<object>.Fail("Không tìm thấy giáo viên"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
         instructor.FullName = request.FullName;
         instructor.Role = request.Role;
         instructor.Bio = request.Bio;
-        instructor.AvatarUrl = request.AvatarUrl;
+        instructor.AvatarUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "instructors", Request, HttpContext.RequestAborted)
+            : request.AvatarUrl;
         instructor.Rating = request.Rating;
         instructor.Experience = request.Experience;
         await _db.SaveChangesAsync();

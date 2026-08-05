@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Services;
 using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
@@ -14,10 +15,12 @@ namespace LeoEducation.Api.Controllers;
 public class TestimonialsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IImageStorageService _imageStorage;
 
-    public TestimonialsController(ApplicationDbContext db)
+    public TestimonialsController(ApplicationDbContext db, IImageStorageService imageStorage)
     {
         _db = db;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet]
@@ -60,7 +63,8 @@ public class TestimonialsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateTestimonialRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] CreateTestimonialRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -68,13 +72,21 @@ public class TestimonialsController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(string.Join("; ", errors)));
         }
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
+        var avatarUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "testimonials", Request, HttpContext.RequestAborted)
+            : request.AvatarURL;
+
         var testimonial = new Testimonial
         {
             StudentName = request.StudentName,
             JobTitle = request.JobTitle,
             Content = request.Content,
             Rating = request.Rating,
-            AvatarURL = request.AvatarURL,
+            AvatarURL = avatarUrl,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow
         };
@@ -89,7 +101,8 @@ public class TestimonialsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] CreateTestimonialRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Update(int id, [FromForm] CreateTestimonialRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -101,11 +114,17 @@ public class TestimonialsController : ControllerBase
         if (testimonial == null)
             return NotFound(ApiResponse<object>.Fail("Không tìm thấy đánh giá"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
         testimonial.StudentName = request.StudentName;
         testimonial.JobTitle = request.JobTitle;
         testimonial.Content = request.Content;
         testimonial.Rating = request.Rating;
-        testimonial.AvatarURL = request.AvatarURL;
+        testimonial.AvatarURL = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "testimonials", Request, HttpContext.RequestAborted)
+            : request.AvatarURL;
         testimonial.IsActive = request.IsActive;
         await _db.SaveChangesAsync();
 

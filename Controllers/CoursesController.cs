@@ -155,7 +155,8 @@ public class CoursesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateCourseRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] CreateCourseRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -168,11 +169,19 @@ public class CoursesController : ControllerBase
         if (request.InstructorId.HasValue && !await _db.Instructors.AnyAsync(i => i.Id == request.InstructorId.Value))
             return BadRequest(ApiResponse<object>.Fail("Giáo viên không tồn tại"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
+        var imageUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "courses", Request, HttpContext.RequestAborted)
+            : request.ImageUrl;
+
         var course = new Course
         {
             CourseName = request.CourseName,
             Description = request.Description,
-            ImageUrl = request.ImageUrl,
+            ImageUrl = imageUrl,
             SubjectId = request.SubjectId,
             InstructorId = request.InstructorId,
             Price = request.Price,
@@ -193,7 +202,8 @@ public class CoursesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateCourseRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Update(int id, [FromForm] UpdateCourseRequest request)
     {
         var course = await _db.Courses.FindAsync(id);
         if (course == null)
@@ -204,9 +214,16 @@ public class CoursesController : ControllerBase
         if (request.InstructorId.HasValue && !await _db.Instructors.AnyAsync(i => i.Id == request.InstructorId.Value))
             return BadRequest(ApiResponse<object>.Fail("Giáo viên không tồn tại"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
         if (request.CourseName != null) course.CourseName = request.CourseName;
         if (request.Description != null) course.Description = request.Description;
-        if (request.ImageUrl != null) course.ImageUrl = request.ImageUrl;
+        if (request.File != null && request.File.Length > 0)
+            course.ImageUrl = await _imageStorage.SaveAsync(request.File, "courses", Request, HttpContext.RequestAborted);
+        else if (request.ImageUrl != null)
+            course.ImageUrl = request.ImageUrl;
         if (request.SubjectId.HasValue) course.SubjectId = request.SubjectId;
         if (request.InstructorId.HasValue) course.InstructorId = request.InstructorId;
         if (request.Price.HasValue) course.Price = request.Price;
@@ -227,13 +244,9 @@ public class CoursesController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest(ApiResponse<object>.Fail("Vui lòng chọn ảnh"));
 
-        if (file.Length > 5 * 1024 * 1024)
-            return BadRequest(ApiResponse<object>.Fail("Ảnh không được vượt quá 5MB"));
-
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var allowedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-        if (!allowedExtensions.Contains(extension))
-            return BadRequest(ApiResponse<object>.Fail("Chỉ hỗ trợ ảnh jpg, jpeg, png, webp hoặc gif"));
+        var imageValidationError = ImageUploadValidator.GetValidationError(file);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
 
         var url = await _imageStorage.SaveAsync(file, "courses", Request, HttpContext.RequestAborted);
         return Ok(ApiResponse<object>.Ok(new { url }, "Upload ảnh thành công"));

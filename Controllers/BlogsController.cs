@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Services;
 using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
@@ -14,10 +15,12 @@ namespace LeoEducation.Api.Controllers;
 public class BlogsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IImageStorageService _imageStorage;
 
-    public BlogsController(ApplicationDbContext db)
+    public BlogsController(ApplicationDbContext db, IImageStorageService imageStorage)
     {
         _db = db;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet]
@@ -58,7 +61,8 @@ public class BlogsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateBlogRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] CreateBlogRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -66,12 +70,20 @@ public class BlogsController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(string.Join("; ", errors)));
         }
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
+        var imageUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "blogs", Request, HttpContext.RequestAborted)
+            : request.ImageUrl;
+
         var blog = new Blog
         {
             Title = request.Title,
             Summary = request.Summary,
             Content = request.Content,
-            ImageUrl = request.ImageUrl,
+            ImageUrl = imageUrl,
             Author = request.Author,
             CreatedAt = DateTime.UtcNow
         };
@@ -86,7 +98,8 @@ public class BlogsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] CreateBlogRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Update(int id, [FromForm] CreateBlogRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -98,10 +111,16 @@ public class BlogsController : ControllerBase
         if (blog == null)
             return NotFound(ApiResponse<object>.Fail("Không tìm thấy bài viết"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
         blog.Title = request.Title;
         blog.Summary = request.Summary;
         blog.Content = request.Content;
-        blog.ImageUrl = request.ImageUrl;
+        blog.ImageUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "blogs", Request, HttpContext.RequestAborted)
+            : request.ImageUrl;
         blog.Author = request.Author;
         await _db.SaveChangesAsync();
 

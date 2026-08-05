@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LeoEducation.Api.Data;
 using LeoEducation.Api.DTOs;
 using LeoEducation.Api.Models;
+using LeoEducation.Api.Services;
 using LeoEducation.Api.Utils;
 
 namespace LeoEducation.Api.Controllers;
@@ -14,10 +15,12 @@ namespace LeoEducation.Api.Controllers;
 public class SubjectsController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IImageStorageService _imageStorage;
 
-    public SubjectsController(ApplicationDbContext db)
+    public SubjectsController(ApplicationDbContext db, IImageStorageService imageStorage)
     {
         _db = db;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet]
@@ -75,7 +78,8 @@ public class SubjectsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateSubjectRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Create([FromForm] CreateSubjectRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -86,11 +90,19 @@ public class SubjectsController : ControllerBase
         if (await _db.Subjects.AnyAsync(s => s.SubjectName == request.SubjectName))
             return BadRequest(ApiResponse<object>.Fail("Môn học đã tồn tại"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
+        var imageUrl = request.File != null && request.File.Length > 0
+            ? await _imageStorage.SaveAsync(request.File, "subjects", Request, HttpContext.RequestAborted)
+            : request.ImageUrl;
+
         var subject = new Subject
         {
             SubjectName = request.SubjectName,
             Description = request.Description,
-            ImageUrl = request.ImageUrl,
+            ImageUrl = imageUrl,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -106,17 +118,24 @@ public class SubjectsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateSubjectRequest request)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Update(int id, [FromForm] UpdateSubjectRequest request)
     {
         var subject = await _db.Subjects.FindAsync(id);
         if (subject == null)
             return NotFound(ApiResponse<object>.Fail("Không tìm thấy môn học"));
 
+        var imageValidationError = ImageUploadValidator.GetValidationError(request.File);
+        if (imageValidationError != null)
+            return BadRequest(ApiResponse<object>.Fail(imageValidationError));
+
         if (!string.IsNullOrWhiteSpace(request.SubjectName))
             subject.SubjectName = request.SubjectName;
         if (request.Description != null)
             subject.Description = request.Description;
-        if (request.ImageUrl != null)
+        if (request.File != null && request.File.Length > 0)
+            subject.ImageUrl = await _imageStorage.SaveAsync(request.File, "subjects", Request, HttpContext.RequestAborted);
+        else if (request.ImageUrl != null)
             subject.ImageUrl = request.ImageUrl;
         if (request.IsActive.HasValue)
             subject.IsActive = request.IsActive.Value;

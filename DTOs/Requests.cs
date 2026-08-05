@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace LeoEducation.Api.DTOs;
 
@@ -44,6 +45,8 @@ public class CreateSubjectRequest
     [StringLength(500)]
     public string? ImageUrl { get; set; }
 
+    public IFormFile? File { get; set; }
+
     public bool IsActive { get; set; } = true;
 }
 
@@ -58,6 +61,8 @@ public class UpdateSubjectRequest
     [StringLength(500)]
     public string? ImageUrl { get; set; }
 
+    public IFormFile? File { get; set; }
+
     public bool? IsActive { get; set; }
 }
 
@@ -71,6 +76,7 @@ public class CreateCourseRequest
     public string? Description { get; set; }
     [StringLength(500)]
     public string? ImageUrl { get; set; }
+    public IFormFile? File { get; set; }
     public int? SubjectId { get; set; }
     public int? InstructorId { get; set; }
 
@@ -91,6 +97,7 @@ public class UpdateCourseRequest
     public string? Description { get; set; }
     [StringLength(500)]
     public string? ImageUrl { get; set; }
+    public IFormFile? File { get; set; }
     public int? SubjectId { get; set; }
     public int? InstructorId { get; set; }
 
@@ -258,6 +265,8 @@ public class CreateTestimonialRequest
     [StringLength(500)]
     public string? AvatarURL { get; set; }
 
+    public IFormFile? File { get; set; }
+
     public bool IsActive { get; set; } = true;
 }
 
@@ -274,6 +283,8 @@ public class CreateInstructorRequest
 
     [StringLength(500)]
     public string? AvatarUrl { get; set; }
+
+    public IFormFile? File { get; set; }
 
     [Range(0, 5)]
     public decimal Rating { get; set; } = 5.0m;
@@ -295,6 +306,8 @@ public class CreateBlogRequest
 
     [StringLength(500)]
     public string? ImageUrl { get; set; }
+
+    public IFormFile? File { get; set; }
 
     [StringLength(100)]
     public string? Author { get; set; }
