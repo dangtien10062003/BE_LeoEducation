@@ -28,7 +28,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-builder.Services.Configure<ImageStorageOptions>(builder.Configuration.GetSection("R2"));
+builder.Services.Configure<ImageStorageOptions>(builder.Configuration.GetSection("Cloudinary"));
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IImageStorageService, ImageStorageService>();
 
 // ===== CORS =====

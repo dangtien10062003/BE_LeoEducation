@@ -44,6 +44,30 @@ public class HealthCheckController : ControllerBase
         }
     }
 
+    [HttpGet("storage")]
+    public async Task<IActionResult> GetStorage(CancellationToken cancellationToken)
+    {
+        var data = await _imageStorage.CheckHealthAsync(cancellationToken);
+        return Ok(new
+        {
+            success = true,
+            message = "Image storage health check",
+            data
+        });
+    }
+
+    [HttpGet("cloudinary")]
+    public async Task<IActionResult> GetCloudinary(CancellationToken cancellationToken)
+    {
+        var data = await _imageStorage.CheckHealthAsync(cancellationToken);
+        return Ok(new
+        {
+            success = true,
+            message = "Cloudinary health check",
+            data
+        });
+    }
+
     [HttpGet("r2")]
     public async Task<IActionResult> GetR2(CancellationToken cancellationToken)
     {
@@ -51,7 +75,7 @@ public class HealthCheckController : ControllerBase
         return Ok(new
         {
             success = true,
-            message = "R2 health check",
+            message = "Image storage health check",
             data
         });
     }

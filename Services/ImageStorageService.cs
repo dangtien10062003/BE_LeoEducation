@@ -1,19 +1,17 @@
-using Amazon;
-using Amazon.Runtime;
-using Amazon.S3;
-using Amazon.S3.Model;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 
 namespace LeoEducation.Api.Services;
 
 public sealed class ImageStorageOptions
 {
-    public string? AccountId { get; set; }
-    public string? Endpoint { get; set; }
-    public string? Bucket { get; set; }
-    public string? AccessKeyId { get; set; }
-    public string? SecretAccessKey { get; set; }
-    public string? PublicBaseUrl { get; set; }
+    public string? CloudName { get; set; }
+    public string? ApiKey { get; set; }
+    public string? ApiSecret { get; set; }
 }
 
 public interface IImageStorageService
@@ -34,188 +32,171 @@ public sealed class ImageStorageService : IImageStorageService
 {
     private readonly ImageStorageOptions _options;
     private readonly IWebHostEnvironment _environment;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ImageStorageService> _logger;
 
     public ImageStorageService(
         IOptions<ImageStorageOptions> options,
         IWebHostEnvironment environment,
+        IHttpClientFactory httpClientFactory,
         ILogger<ImageStorageService> logger)
     {
         _options = options.Value;
         _environment = environment;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
     public async Task<string> SaveAsync(IFormFile file, string folder, HttpRequest request, CancellationToken cancellationToken)
     {
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var publicId = $"{Guid.NewGuid():N}{extension}";
 
-        if (HasAnyR2Configuration())
-            return await SaveToR2Async(file, folder, fileName, cancellationToken);
+        if (HasCloudinaryConfiguration())
+            return await SaveToCloudinaryAsync(file, folder, publicId, cancellationToken);
 
-        return await SaveToLocalDiskAsync(file, folder, fileName, request, cancellationToken);
+        return await SaveToLocalDiskAsync(file, folder, publicId, request, cancellationToken);
     }
 
     public async Task<object> CheckHealthAsync(CancellationToken cancellationToken)
     {
-        var accountId = _options.AccountId?.Trim();
-        var endpoint = NormalizeEndpoint(_options.Endpoint, accountId);
-        var bucket = _options.Bucket?.Trim();
-        var accessKeyId = _options.AccessKeyId?.Trim();
-        var secretAccessKey = _options.SecretAccessKey?.Trim();
-        var publicBaseUrl = _options.PublicBaseUrl?.Trim();
-        var hasAnyR2Configuration = HasAnyR2Configuration();
-        var hasRequiredR2Configuration =
-            !string.IsNullOrWhiteSpace(endpoint)
-            && !string.IsNullOrWhiteSpace(bucket)
-            && !string.IsNullOrWhiteSpace(accessKeyId)
-            && !string.IsNullOrWhiteSpace(secretAccessKey)
-            && !string.IsNullOrWhiteSpace(publicBaseUrl);
+        var cloudName = _options.CloudName?.Trim();
+        var apiKey = _options.ApiKey?.Trim();
+        var apiSecret = _options.ApiSecret?.Trim();
+        var configured =
+            !string.IsNullOrWhiteSpace(cloudName)
+            && !string.IsNullOrWhiteSpace(apiKey)
+            && !string.IsNullOrWhiteSpace(apiSecret);
 
-        if (!hasAnyR2Configuration)
+        if (!HasAnyCloudinaryConfiguration())
         {
             return new
             {
                 mode = "local",
                 configured = false,
-                message = "R2 is not configured; uploads use local disk."
+                message = "Cloudinary is not configured; uploads use local disk."
             };
         }
 
-        if (!hasRequiredR2Configuration)
+        if (!configured)
         {
             return new
             {
-                mode = "r2",
+                mode = "cloudinary",
                 configured = false,
-                accountId = !string.IsNullOrWhiteSpace(accountId),
-                endpoint = !string.IsNullOrWhiteSpace(endpoint),
-                bucket = !string.IsNullOrWhiteSpace(bucket),
-                accessKeyId = !string.IsNullOrWhiteSpace(accessKeyId),
-                secretAccessKey = !string.IsNullOrWhiteSpace(secretAccessKey),
-                publicBaseUrl = !string.IsNullOrWhiteSpace(publicBaseUrl),
-                message = "R2 configuration is incomplete."
+                cloudName = !string.IsNullOrWhiteSpace(cloudName),
+                apiKey = !string.IsNullOrWhiteSpace(apiKey),
+                apiSecret = !string.IsNullOrWhiteSpace(apiSecret),
+                message = "Cloudinary configuration is incomplete."
             };
         }
 
-        var config = CreateR2Config(endpoint);
-        using var client = new AmazonS3Client(
-            new BasicAWSCredentials(accessKeyId, secretAccessKey),
-            config);
+        var client = _httpClientFactory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://api.cloudinary.com/v1_1/{Uri.EscapeDataString(cloudName!)}/resources/image?max_results=1");
+        request.Headers.Authorization = CreateBasicAuthHeader(apiKey!, apiSecret!);
 
         try
         {
-            var response = await client.ListObjectsV2Async(new ListObjectsV2Request
-            {
-                BucketName = bucket,
-                MaxKeys = 1,
-            }, cancellationToken);
+            using var response = await client.SendAsync(request, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
             return new
             {
-                mode = "r2",
+                mode = "cloudinary",
                 configured = true,
-                reachable = true,
-                endpoint,
-                bucket,
-                accessKeyId = Mask(accessKeyId!),
-                publicBaseUrl,
-                objectCountProbe = response.S3Objects.Count,
+                reachable = response.IsSuccessStatusCode,
+                cloudName,
+                apiKey = Mask(apiKey!),
+                statusCode = (int)response.StatusCode,
+                message = response.IsSuccessStatusCode ? "Cloudinary credentials are valid." : body
             };
         }
-        catch (AmazonS3Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Cloudflare R2 health check failed. StatusCode={StatusCode}, ErrorCode={ErrorCode}, RequestId={RequestId}, Bucket={Bucket}", ex.StatusCode, ex.ErrorCode, ex.RequestId, bucket);
+            _logger.LogError(ex, "Cloudinary health check failed. CloudName={CloudName}", cloudName);
             return new
             {
-                mode = "r2",
+                mode = "cloudinary",
                 configured = true,
                 reachable = false,
-                endpoint,
-                bucket,
-                accessKeyId = Mask(accessKeyId!),
-                publicBaseUrl,
-                statusCode = ex.StatusCode.ToString(),
-                errorCode = ex.ErrorCode,
-                requestId = ex.RequestId,
-                message = ex.Message,
+                cloudName,
+                apiKey = Mask(apiKey!),
+                message = ex.Message
             };
         }
     }
 
-    private async Task<string> SaveToR2Async(IFormFile file, string folder, string fileName, CancellationToken cancellationToken)
+    private async Task<string> SaveToCloudinaryAsync(
+        IFormFile file,
+        string folder,
+        string publicId,
+        CancellationToken cancellationToken)
     {
-        var accountId = _options.AccountId?.Trim();
-        var endpoint = NormalizeEndpoint(_options.Endpoint, accountId);
-        var bucket = _options.Bucket?.Trim();
-        var accessKeyId = _options.AccessKeyId?.Trim();
-        var secretAccessKey = _options.SecretAccessKey?.Trim();
-        var publicBaseUrl = _options.PublicBaseUrl?.Trim();
+        var cloudName = _options.CloudName?.Trim();
+        var apiKey = _options.ApiKey?.Trim();
+        var apiSecret = _options.ApiSecret?.Trim();
 
-        if (string.IsNullOrWhiteSpace(endpoint)
-            || string.IsNullOrWhiteSpace(bucket)
-            || string.IsNullOrWhiteSpace(accessKeyId)
-            || string.IsNullOrWhiteSpace(secretAccessKey)
-            || string.IsNullOrWhiteSpace(publicBaseUrl))
+        if (string.IsNullOrWhiteSpace(cloudName)
+            || string.IsNullOrWhiteSpace(apiKey)
+            || string.IsNullOrWhiteSpace(apiSecret))
         {
-            throw new InvalidOperationException("Missing R2 configuration. Check R2:Endpoint, R2:Bucket, R2:AccessKeyId, R2:SecretAccessKey, and R2:PublicBaseUrl.");
+            throw new InvalidOperationException("Missing Cloudinary configuration. Check Cloudinary:CloudName, Cloudinary:ApiKey, and Cloudinary:ApiSecret.");
         }
 
-        var key = $"{folder.Trim('/')}/{fileName}";
+        var cloudinaryFolder = $"leo-education/{folder.Trim('/')}";
+        var publicIdWithoutExtension = Path.GetFileNameWithoutExtension(publicId);
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var signature = CreateSignature(new Dictionary<string, string>
+        {
+            ["folder"] = cloudinaryFolder,
+            ["public_id"] = publicIdWithoutExtension,
+            ["timestamp"] = timestamp
+        }, apiSecret);
+
+        using var content = new MultipartFormDataContent();
+        await using var stream = file.OpenReadStream();
+        using var fileContent = new StreamContent(stream);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(
+            string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType);
+
+        content.Add(fileContent, "file", file.FileName);
+        content.Add(new StringContent(apiKey), "api_key");
+        content.Add(new StringContent(timestamp), "timestamp");
+        content.Add(new StringContent(signature), "signature");
+        content.Add(new StringContent(cloudinaryFolder), "folder");
+        content.Add(new StringContent(publicIdWithoutExtension), "public_id");
+
+        var uploadUrl = $"https://api.cloudinary.com/v1_1/{Uri.EscapeDataString(cloudName)}/image/upload";
         _logger.LogInformation(
-            "Uploading image to R2. Endpoint={Endpoint}, Bucket={Bucket}, Key={Key}, AccessKeyId={AccessKeyId}, PublicBaseUrl={PublicBaseUrl}",
-            endpoint,
-            bucket,
-            key,
-            Mask(accessKeyId),
-            publicBaseUrl);
+            "Uploading image to Cloudinary. CloudName={CloudName}, Folder={Folder}, PublicId={PublicId}, ApiKey={ApiKey}",
+            cloudName,
+            cloudinaryFolder,
+            publicIdWithoutExtension,
+            Mask(apiKey));
 
-        var config = CreateR2Config(endpoint);
-        using var client = new AmazonS3Client(
-            new BasicAWSCredentials(accessKeyId, secretAccessKey),
-            config);
+        var client = _httpClientFactory.CreateClient();
+        using var response = await client.PostAsync(uploadUrl, content, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            await client.PutObjectAsync(new PutObjectRequest
-            {
-                BucketName = bucket,
-                Key = key,
-                InputStream = stream,
-                ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-                DisablePayloadSigning = true,
-                DisableDefaultChecksumValidation = true,
-            }, cancellationToken);
-        }
-        catch (AmazonS3Exception ex)
+        if (!response.IsSuccessStatusCode)
         {
             _logger.LogError(
-                ex,
-                "Cloudflare R2 upload failed. StatusCode={StatusCode}, ErrorCode={ErrorCode}, RequestId={RequestId}, Bucket={Bucket}, Key={Key}",
-                ex.StatusCode,
-                ex.ErrorCode,
-                ex.RequestId,
-                bucket,
-                key);
+                "Cloudinary upload failed. StatusCode={StatusCode}, CloudName={CloudName}, Folder={Folder}, Response={Response}",
+                response.StatusCode,
+                cloudName,
+                cloudinaryFolder,
+                body);
 
-            throw new ImageStorageException(
-                $"Không upload được ảnh lên Cloudflare R2 ({ex.StatusCode}, {ex.ErrorCode}). Kiểm tra bucket, AccountId, Access Key quyền Object Write và PublicBaseUrl.",
-                ex);
-        }
-        catch (AmazonServiceException ex)
-        {
-            _logger.LogError(ex, "Cloudflare R2 service error while uploading image. Bucket={Bucket}, Key={Key}", bucket, key);
-            throw new ImageStorageException("Không upload được ảnh lên Cloudflare R2. Kiểm tra cấu hình R2 trên Render.", ex);
-        }
-        catch (AmazonClientException ex)
-        {
-            _logger.LogError(ex, "Cloudflare R2 client error while uploading image. Bucket={Bucket}, Key={Key}", bucket, key);
-            throw new ImageStorageException("Không kết nối được Cloudflare R2. Kiểm tra AccountId và network từ Render.", ex);
+            throw new ImageStorageException($"Không upload được ảnh lên Cloudinary ({response.StatusCode}). Kiểm tra CloudName, API Key và API Secret.");
         }
 
-        return $"{publicBaseUrl.TrimEnd('/')}/{key}";
+        var result = JsonSerializer.Deserialize<CloudinaryUploadResponse>(body);
+        if (string.IsNullOrWhiteSpace(result?.SecureUrl))
+            throw new ImageStorageException("Cloudinary upload succeeded but did not return a secure URL.");
+
+        return result.SecureUrl;
     }
 
     private async Task<string> SaveToLocalDiskAsync(IFormFile file, string folder, string fileName, HttpRequest request, CancellationToken cancellationToken)
@@ -232,37 +213,35 @@ public sealed class ImageStorageService : IImageStorageService
         return $"{request.Scheme}://{request.Host}/uploads/{folder}/{fileName}";
     }
 
-    private bool HasAnyR2Configuration()
+    private bool HasAnyCloudinaryConfiguration()
     {
-        return !string.IsNullOrWhiteSpace(_options.AccountId)
-            || !string.IsNullOrWhiteSpace(_options.Endpoint)
-            || !string.IsNullOrWhiteSpace(_options.Bucket)
-            || !string.IsNullOrWhiteSpace(_options.AccessKeyId)
-            || !string.IsNullOrWhiteSpace(_options.SecretAccessKey)
-            || !string.IsNullOrWhiteSpace(_options.PublicBaseUrl);
+        return !string.IsNullOrWhiteSpace(_options.CloudName)
+            || !string.IsNullOrWhiteSpace(_options.ApiKey)
+            || !string.IsNullOrWhiteSpace(_options.ApiSecret);
     }
 
-    private static string NormalizeEndpoint(string? endpoint, string? accountId)
+    private bool HasCloudinaryConfiguration()
     {
-        var value = endpoint?.Trim().TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(value))
-            return value;
-
-        return string.IsNullOrWhiteSpace(accountId)
-            ? string.Empty
-            : $"https://{accountId}.r2.cloudflarestorage.com";
+        return !string.IsNullOrWhiteSpace(_options.CloudName)
+            && !string.IsNullOrWhiteSpace(_options.ApiKey)
+            && !string.IsNullOrWhiteSpace(_options.ApiSecret);
     }
 
-    private static AmazonS3Config CreateR2Config(string endpoint)
+    private static AuthenticationHeaderValue CreateBasicAuthHeader(string apiKey, string apiSecret)
     {
-        return new AmazonS3Config
-        {
-            ServiceURL = endpoint,
-            ForcePathStyle = true,
-            AuthenticationRegion = "us-east-1",
-            AuthenticationServiceName = "s3",
-            RegionEndpoint = RegionEndpoint.USEast1,
-        };
+        var value = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:{apiSecret}"));
+        return new AuthenticationHeaderValue("Basic", value);
+    }
+
+    private static string CreateSignature(IReadOnlyDictionary<string, string> parameters, string apiSecret)
+    {
+        var payload = string.Join("&", parameters
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Value))
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => $"{pair.Key}={pair.Value}"));
+
+        var bytes = SHA1.HashData(Encoding.UTF8.GetBytes(payload + apiSecret));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     private static string Mask(string value)
@@ -271,5 +250,11 @@ public sealed class ImageStorageService : IImageStorageService
             return "***";
 
         return $"{value[..4]}...{value[^4..]}";
+    }
+
+    private sealed class CloudinaryUploadResponse
+    {
+        [JsonPropertyName("secure_url")]
+        public string? SecureUrl { get; set; }
     }
 }
