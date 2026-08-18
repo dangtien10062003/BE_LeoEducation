@@ -9,6 +9,7 @@ namespace LeoEducation.Api.Services;
 public sealed class ImageStorageOptions
 {
     public string? AccountId { get; set; }
+    public string? Endpoint { get; set; }
     public string? Bucket { get; set; }
     public string? AccessKeyId { get; set; }
     public string? SecretAccessKey { get; set; }
@@ -59,13 +60,14 @@ public sealed class ImageStorageService : IImageStorageService
     public async Task<object> CheckHealthAsync(CancellationToken cancellationToken)
     {
         var accountId = _options.AccountId?.Trim();
+        var endpoint = NormalizeEndpoint(_options.Endpoint, accountId);
         var bucket = _options.Bucket?.Trim();
         var accessKeyId = _options.AccessKeyId?.Trim();
         var secretAccessKey = _options.SecretAccessKey?.Trim();
         var publicBaseUrl = _options.PublicBaseUrl?.Trim();
         var hasAnyR2Configuration = HasAnyR2Configuration();
         var hasRequiredR2Configuration =
-            !string.IsNullOrWhiteSpace(accountId)
+            !string.IsNullOrWhiteSpace(endpoint)
             && !string.IsNullOrWhiteSpace(bucket)
             && !string.IsNullOrWhiteSpace(accessKeyId)
             && !string.IsNullOrWhiteSpace(secretAccessKey)
@@ -88,6 +90,7 @@ public sealed class ImageStorageService : IImageStorageService
                 mode = "r2",
                 configured = false,
                 accountId = !string.IsNullOrWhiteSpace(accountId),
+                endpoint = !string.IsNullOrWhiteSpace(endpoint),
                 bucket = !string.IsNullOrWhiteSpace(bucket),
                 accessKeyId = !string.IsNullOrWhiteSpace(accessKeyId),
                 secretAccessKey = !string.IsNullOrWhiteSpace(secretAccessKey),
@@ -96,7 +99,6 @@ public sealed class ImageStorageService : IImageStorageService
             };
         }
 
-        var endpoint = $"https://{accountId}.r2.cloudflarestorage.com";
         var config = CreateR2Config(endpoint);
         using var client = new AmazonS3Client(
             new BasicAWSCredentials(accessKeyId, secretAccessKey),
@@ -145,22 +147,22 @@ public sealed class ImageStorageService : IImageStorageService
     private async Task<string> SaveToR2Async(IFormFile file, string folder, string fileName, CancellationToken cancellationToken)
     {
         var accountId = _options.AccountId?.Trim();
+        var endpoint = NormalizeEndpoint(_options.Endpoint, accountId);
         var bucket = _options.Bucket?.Trim();
         var accessKeyId = _options.AccessKeyId?.Trim();
         var secretAccessKey = _options.SecretAccessKey?.Trim();
         var publicBaseUrl = _options.PublicBaseUrl?.Trim();
 
-        if (string.IsNullOrWhiteSpace(accountId)
+        if (string.IsNullOrWhiteSpace(endpoint)
             || string.IsNullOrWhiteSpace(bucket)
             || string.IsNullOrWhiteSpace(accessKeyId)
             || string.IsNullOrWhiteSpace(secretAccessKey)
             || string.IsNullOrWhiteSpace(publicBaseUrl))
         {
-            throw new InvalidOperationException("Missing R2 configuration. Check R2:AccountId, R2:Bucket, R2:AccessKeyId, R2:SecretAccessKey, and R2:PublicBaseUrl.");
+            throw new InvalidOperationException("Missing R2 configuration. Check R2:Endpoint, R2:Bucket, R2:AccessKeyId, R2:SecretAccessKey, and R2:PublicBaseUrl.");
         }
 
         var key = $"{folder.Trim('/')}/{fileName}";
-        var endpoint = $"https://{accountId}.r2.cloudflarestorage.com";
         _logger.LogInformation(
             "Uploading image to R2. Endpoint={Endpoint}, Bucket={Bucket}, Key={Key}, AccessKeyId={AccessKeyId}, PublicBaseUrl={PublicBaseUrl}",
             endpoint,
@@ -233,10 +235,22 @@ public sealed class ImageStorageService : IImageStorageService
     private bool HasAnyR2Configuration()
     {
         return !string.IsNullOrWhiteSpace(_options.AccountId)
+            || !string.IsNullOrWhiteSpace(_options.Endpoint)
             || !string.IsNullOrWhiteSpace(_options.Bucket)
             || !string.IsNullOrWhiteSpace(_options.AccessKeyId)
             || !string.IsNullOrWhiteSpace(_options.SecretAccessKey)
             || !string.IsNullOrWhiteSpace(_options.PublicBaseUrl);
+    }
+
+    private static string NormalizeEndpoint(string? endpoint, string? accountId)
+    {
+        var value = endpoint?.Trim().TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(value))
+            return value;
+
+        return string.IsNullOrWhiteSpace(accountId)
+            ? string.Empty
+            : $"https://{accountId}.r2.cloudflarestorage.com";
     }
 
     private static AmazonS3Config CreateR2Config(string endpoint)
