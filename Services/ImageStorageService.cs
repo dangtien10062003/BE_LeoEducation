@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -147,14 +146,6 @@ public sealed class ImageStorageService : IImageStorageService
 
         var cloudinaryFolder = $"leo-education/{folder.Trim('/')}";
         var publicIdWithoutExtension = Path.GetFileNameWithoutExtension(publicId);
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var signature = CreateSignature(new Dictionary<string, string>
-        {
-            ["folder"] = cloudinaryFolder,
-            ["public_id"] = publicIdWithoutExtension,
-            ["timestamp"] = timestamp
-        }, apiSecret);
-
         using var content = new MultipartFormDataContent();
         await using var stream = file.OpenReadStream();
         using var fileContent = new StreamContent(stream);
@@ -162,9 +153,6 @@ public sealed class ImageStorageService : IImageStorageService
             string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType);
 
         content.Add(fileContent, "file", file.FileName);
-        content.Add(new StringContent(apiKey), "api_key");
-        content.Add(new StringContent(timestamp), "timestamp");
-        content.Add(new StringContent(signature), "signature");
         content.Add(new StringContent(cloudinaryFolder), "folder");
         content.Add(new StringContent(publicIdWithoutExtension), "public_id");
 
@@ -177,7 +165,11 @@ public sealed class ImageStorageService : IImageStorageService
             Mask(apiKey));
 
         var client = _httpClientFactory.CreateClient();
-        using var response = await client.PostAsync(uploadUrl, content, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl);
+        request.Headers.Authorization = CreateBasicAuthHeader(apiKey, apiSecret);
+        request.Content = content;
+
+        using var response = await client.SendAsync(request, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -189,7 +181,7 @@ public sealed class ImageStorageService : IImageStorageService
                 cloudinaryFolder,
                 body);
 
-            throw new ImageStorageException($"Không upload được ảnh lên Cloudinary ({response.StatusCode}). Kiểm tra CloudName, API Key và API Secret.");
+            throw new ImageStorageException($"Không upload được ảnh lên Cloudinary ({response.StatusCode}). {GetCloudinaryErrorMessage(body)}");
         }
 
         var result = JsonSerializer.Deserialize<CloudinaryUploadResponse>(body);
@@ -233,17 +225,6 @@ public sealed class ImageStorageService : IImageStorageService
         return new AuthenticationHeaderValue("Basic", value);
     }
 
-    private static string CreateSignature(IReadOnlyDictionary<string, string> parameters, string apiSecret)
-    {
-        var payload = string.Join("&", parameters
-            .Where(pair => !string.IsNullOrWhiteSpace(pair.Value))
-            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
-            .Select(pair => $"{pair.Key}={pair.Value}"));
-
-        var bytes = SHA1.HashData(Encoding.UTF8.GetBytes(payload + apiSecret));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
     private static string Mask(string value)
     {
         if (value.Length <= 8)
@@ -256,5 +237,32 @@ public sealed class ImageStorageService : IImageStorageService
     {
         [JsonPropertyName("secure_url")]
         public string? SecureUrl { get; set; }
+    }
+
+    private static string GetCloudinaryErrorMessage(string body)
+    {
+        try
+        {
+            var error = JsonSerializer.Deserialize<CloudinaryErrorResponse>(body);
+            if (!string.IsNullOrWhiteSpace(error?.Error?.Message))
+                return error.Error.Message;
+        }
+        catch (JsonException)
+        {
+        }
+
+        return "Kiểm tra CloudName, API Key và API Secret.";
+    }
+
+    private sealed class CloudinaryErrorResponse
+    {
+        [JsonPropertyName("error")]
+        public CloudinaryError? Error { get; set; }
+    }
+
+    private sealed class CloudinaryError
+    {
+        [JsonPropertyName("message")]
+        public string? Message { get; set; }
     }
 }
