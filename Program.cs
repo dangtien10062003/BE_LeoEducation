@@ -16,6 +16,15 @@ Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot
 Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "courses"));
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.OnRejected = async (context, token) =>
+        await context.HttpContext.Response.WriteAsJsonAsync(new { success = false, code = "RATE_LIMIT" }, token);
+    options.AddPolicy("recruitment", context => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+        { PermitLimit = 10, Window = TimeSpan.FromMinutes(15), QueueLimit = 0 }));
+});
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -210,9 +219,20 @@ else if (autoMigrate)
 }
 
 app.UseHttpsRedirection();
+var recruitmentImportFile = builder.Configuration["Recruitment:ImportFile"];
+if (!string.IsNullOrWhiteSpace(recruitmentImportFile))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var imported = await RecruitmentImporter.ImportAsync(db, recruitmentImportFile);
+    Console.WriteLine($"Imported {imported} recruitment jobs.");
+    return;
+}
+
 app.UseStaticFiles();
 app.UseCors("AllowReactFrontend");
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();

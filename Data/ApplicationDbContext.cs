@@ -33,6 +33,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Instructor> Instructors => Set<Instructor>();
     public DbSet<ContactRequest> ContactRequests => Set<ContactRequest>();
     public DbSet<Blog> Blogs => Set<Blog>();
+    public DbSet<RecruitmentJob> RecruitmentJobs => Set<RecruitmentJob>();
+    public DbSet<JobApplication> JobApplications => Set<JobApplication>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<TeachingClass> Classes => Set<TeachingClass>();
@@ -42,6 +44,18 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<RecruitmentJob>(entity =>
+        {
+            entity.ToTable("RecruitmentJobs");
+            entity.Property(j => j.TranslationsJson).HasColumnType("jsonb");
+        });
+        modelBuilder.Entity<JobApplication>(entity =>
+        {
+            entity.ToTable("JobApplications");
+            entity.HasIndex(a => new { a.JobId, a.Email }).IsUnique();
+            entity.HasOne<RecruitmentJob>().WithMany().HasForeignKey(a => a.JobId).OnDelete(DeleteBehavior.Restrict);
+        });
 
         // ===== Subjects =====
         modelBuilder.Entity<Subject>(entity =>

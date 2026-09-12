@@ -1,0 +1,142 @@
+[
+  {
+    "id": 4,
+    "translations": {
+      "vi": {
+        "title": "[Mẫu] Chuyên viên tư vấn giáo dục",
+        "location": "Địa điểm trao đổi khi phỏng vấn",
+        "salary": "Thỏa thuận (dữ liệu mẫu)",
+        "description": "Tin mẫu dùng để xem thử trang tuyển dụng.\nTiếp nhận nhu cầu học tập và tư vấn chương trình phù hợp.\nHỗ trợ sắp xếp lịch học thử, theo dõi phản hồi của phụ huynh và học sinh.",
+        "requirements": "Giao tiếp tốt, biết lắng nghe và xử lý tình huống.\nCó kỹ năng quản lý thông tin và sắp xếp công việc.\nƯu tiên kinh nghiệm tư vấn hoặc chăm sóc khách hàng.",
+        "benefits": "Được hướng dẫn về chương trình và quy trình tư vấn.\nPhối hợp cùng giáo viên và đội ngũ học thuật.\nNội dung minh họa, không phải cam kết tuyển dụng chính thức."
+      },
+      "en": {
+        "title": "[Demo] Education Consultant",
+        "location": "Location discussed at interview",
+        "salary": "Negotiable (demo data)",
+        "description": "Demo listing for previewing the careers page.\nUnderstand learning needs and recommend suitable programs.\nArrange trial lessons and follow up on parent and student feedback.",
+        "requirements": "Good communication, listening and problem-solving skills.\nAbility to organize information and daily tasks.\nConsulting or customer service experience is preferred.",
+        "benefits": "Guidance on programs and consultation processes.\nCollaboration with teachers and the academic team.\nIllustrative content, not an official recruitment commitment."
+      },
+      "zh": {
+        "title": "[示例] 教育咨询专员",
+        "location": "工作地点面试时沟通",
+        "salary": "面议（示例数据）",
+        "description": "此职位用于预览招聘页面。\n了解学习需求并推荐合适课程。\n安排试听课程并跟进家长和学生的反馈。",
+        "requirements": "善于沟通、倾听和解决问题。\n能够管理信息并安排日常工作。\n有咨询或客户服务经验者优先。",
+        "benefits": "提供课程和咨询流程指导。\n与教师及教研团队协作。\n内容仅供演示，并非正式招聘承诺。"
+      }
+    },
+    "department": "operations",
+    "employmentType": "full-time",
+    "workMode": "onsite",
+    "closesAt": null,
+    "isActive": true,
+    "createdAt": "2026-09-12T07:52:59.429Z"
+  },
+  {
+    "id": 3,
+    "translations": {
+      "vi": {
+        "title": "[Mẫu] Chuyên viên học thuật",
+        "location": "Địa điểm trao đổi khi phỏng vấn",
+        "salary": "Thỏa thuận (dữ liệu mẫu)",
+        "description": "Tin mẫu dùng để xem thử trang tuyển dụng.\nXây dựng học liệu và kiểm tra chất lượng bài giảng.\nPhối hợp với giáo viên đánh giá kết quả học tập và điều chỉnh lộ trình.",
+        "requirements": "Có kinh nghiệm giảng dạy hoặc phát triển học liệu.\nKỹ năng tổ chức công việc và phản hồi chuyên môn.\nCẩn thận, chủ động và có khả năng làm việc nhóm.",
+        "benefits": "Tham gia phát triển chương trình học.\nĐược chia sẻ kiến thức và nâng cao chuyên môn.\nNội dung minh họa, không phải cam kết tuyển dụng chính thức."
+      },
+      "en": {
+        "title": "[Demo] Academic Specialist",
+        "location": "Location discussed at interview",
+        "salary": "Negotiable (demo data)",
+        "description": "Demo listing for previewing the careers page.\nDevelop learning materials and review lesson quality.\nWork with teachers to assess outcomes and refine learning plans.",
+        "requirements": "Experience in teaching or curriculum development.\nGood organization and constructive feedback skills.\nAttention to detail, initiative and teamwork.",
+        "benefits": "Contribute to curriculum development.\nKnowledge sharing and professional development.\nIllustrative content, not an official recruitment commitment."
+      },
+      "zh": {
+        "title": "[示例] 教研专员",
+        "location": "工作地点面试时沟通",
+        "salary": "面议（示例数据）",
+        "description": "此职位用于预览招聘页面。\n开发学习资料并检查课程质量。\n与教师合作评估学习成果和调整学习计划。",
+        "requirements": "有教学或课程开发经验。\n具备组织能力和专业反馈能力。\n认真主动，善于团队合作。",
+        "benefits": "参与课程开发。\n知识交流与专业成长。\n内容仅供演示，并非正式招聘承诺。"
+      }
+    },
+    "department": "academic",
+    "employmentType": "full-time",
+    "workMode": "hybrid",
+    "closesAt": null,
+    "isActive": true,
+    "createdAt": "2026-09-12T07:52:59.429Z"
+  },
+  {
+    "id": 2,
+    "translations": {
+      "vi": {
+        "title": "[Mẫu] Cộng tác viên giảng dạy Tiếng Anh",
+        "location": "Trực tuyến toàn quốc",
+        "salary": "Theo buổi dạy (dữ liệu mẫu)",
+        "description": "Tin mẫu dùng để xem thử trang tuyển dụng.\nHướng dẫn học sinh luyện giao tiếp, ngữ pháp và kỹ năng đọc hiểu.\nThiết kế hoạt động học phù hợp với trình độ của từng học sinh.",
+        "requirements": "Sử dụng Tiếng Anh tốt và phát âm rõ ràng.\nCó khả năng tạo hứng thú học tập.\nƯu tiên ứng viên đã có kinh nghiệm gia sư.",
+        "benefits": "Chủ động đăng ký khung giờ giảng dạy.\nTrao đổi phương pháp với đội ngũ học thuật.\nNội dung minh họa, không phải cam kết tuyển dụng chính thức."
+      },
+      "en": {
+        "title": "[Demo] English Teaching Collaborator",
+        "location": "Remote, Vietnam",
+        "salary": "Per lesson (demo data)",
+        "description": "Demo listing for previewing the careers page.\nHelp students practice speaking, grammar and reading comprehension.\nAdapt learning activities to each student.",
+        "requirements": "Good English proficiency and clear pronunciation.\nAbility to motivate learners.\nTutoring experience is preferred.",
+        "benefits": "Choose available teaching time slots.\nExchange teaching methods with the academic team.\nIllustrative content, not an official recruitment commitment."
+      },
+      "zh": {
+        "title": "[示例] 英语教学合作教师",
+        "location": "越南境内远程办公",
+        "salary": "按课时计算（示例数据）",
+        "description": "此职位用于预览招聘页面。\n帮助学生练习口语、语法和阅读理解。\n根据学生水平设计学习活动。",
+        "requirements": "英语熟练，发音清晰。\n能够激发学习兴趣。\n有辅导经验者优先。",
+        "benefits": "可选择授课时间段。\n与教研团队交流教学方法。\n内容仅供演示，并非正式招聘承诺。"
+      }
+    },
+    "department": "teaching",
+    "employmentType": "contract",
+    "workMode": "remote",
+    "closesAt": null,
+    "isActive": true,
+    "createdAt": "2026-09-12T07:52:59.429Z"
+  },
+  {
+    "id": 1,
+    "translations": {
+      "vi": {
+        "title": "[Mẫu] Giáo viên Toán online",
+        "location": "Trực tuyến toàn quốc",
+        "salary": "Thỏa thuận (dữ liệu mẫu)",
+        "description": "Tin mẫu dùng để xem thử trang tuyển dụng.\nGiảng dạy Toán cho học sinh THCS theo hình thức 1-1.\nChuẩn bị bài giảng và theo dõi tiến bộ sau mỗi buổi học.",
+        "requirements": "Có nền tảng chuyên môn Toán và kỹ năng truyền đạt rõ ràng.\nSử dụng thành thạo công cụ dạy học trực tuyến.\nCó máy tính, đường truyền ổn định và tinh thần trách nhiệm.",
+        "benefits": "Lịch dạy linh hoạt theo thỏa thuận.\nĐược trao đổi chuyên môn và tiếp cận tài liệu giảng dạy.\nNội dung minh họa, không phải cam kết tuyển dụng chính thức."
+      },
+      "en": {
+        "title": "[Demo] Online Mathematics Teacher",
+        "location": "Remote, Vietnam",
+        "salary": "Negotiable (demo data)",
+        "description": "Demo listing for previewing the careers page.\nTeach one-to-one mathematics lessons to secondary students.\nPrepare lessons and track student progress.",
+        "requirements": "Strong mathematics knowledge and clear communication.\nFamiliarity with online teaching tools.\nA computer, reliable internet connection and a responsible approach.",
+        "benefits": "A flexible teaching schedule by agreement.\nProfessional exchanges and access to teaching materials.\nIllustrative content, not an official recruitment commitment."
+      },
+      "zh": {
+        "title": "[示例] 在线数学教师",
+        "location": "越南境内远程办公",
+        "salary": "面议（示例数据）",
+        "description": "此职位用于预览招聘页面。\n为初中生提供一对一数学辅导。\n准备课程并跟踪学生的学习进度。",
+        "requirements": "具备扎实的数学基础和清晰的表达能力。\n熟悉在线教学工具。\n具备电脑、稳定网络和责任心。",
+        "benefits": "双方协商灵活安排课程。\n教学交流及教学资料支持。\n内容仅供演示，并非正式招聘承诺。"
+      }
+    },
+    "department": "teaching",
+    "employmentType": "part-time",
+    "workMode": "remote",
+    "closesAt": null,
+    "isActive": true,
+    "createdAt": "2026-09-12T07:52:59.429Z"
+  }
+]
