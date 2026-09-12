@@ -15,7 +15,12 @@ namespace LeoEducation.Api.Controllers;
 public class RecruitmentController(ApplicationDbContext db) : ControllerBase
 {
     private static readonly string[] States = ["new", "reviewing", "interview", "hired", "rejected"];
-    private IQueryable<RecruitmentJob> OpenJobs() => db.RecruitmentJobs.Where(j => j.IsActive && (j.ClosesAt == null || j.ClosesAt > DateTime.UtcNow));
+    private IQueryable<RecruitmentJob> OpenJobs()
+    {
+        // The existing model stores UTC values in timestamp-without-time-zone columns.
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        return db.RecruitmentJobs.Where(j => j.IsActive && (j.ClosesAt == null || j.ClosesAt > now));
+    }
     private ObjectResult Failure(int status, string code) => StatusCode(status, new { success = false, code });
 
     [HttpGet("jobs"), AllowAnonymous]
